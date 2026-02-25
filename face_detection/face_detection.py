@@ -263,7 +263,7 @@ class SpeechRecognizer:
             return None
         try:
             logger.info(f"LISTENING… (energy threshold: {self.recognizer.energy_threshold:.0f})")
-            with self.microphone as source:
+            with  sr.Microphone() as source:
                 audio = self.recognizer.listen(source, timeout=timeout, phrase_time_limit=10)
             logger.info("Audio captured — sending to Google STT…")
             text = self.recognizer.recognize_google(audio, language="en-IN")  # Indian English accent

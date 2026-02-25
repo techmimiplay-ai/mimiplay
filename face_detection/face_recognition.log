@@ -8510,3 +8510,478 @@ AttributeError: module 'cv2' has no attribute 'VideoCapture'
 2026-02-24 19:54:06,638 - ERROR - Listen error: This audio source is already inside a context manager
 2026-02-24 19:54:06,638 - INFO - SPEAKING: I didn't hear you. Can you say that again?
 2026-02-24 19:54:06,776 - INFO - DONE SPEAKING
+2026-02-25 14:35:54,378 - INFO - SpeechManager ready
+2026-02-25 14:35:55,529 - INFO - Calibrating microphone…
+2026-02-25 14:35:56,650 - INFO - SpeechRecognizer ready
+2026-02-25 14:36:18,544 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 14:36:24,244 - INFO - DONE SPEAKING
+2026-02-25 14:36:24,244 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:24,245 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:24,246 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:24,398 - INFO - DONE SPEAKING
+2026-02-25 14:36:24,398 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:24,399 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:24,400 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:24,554 - INFO - DONE SPEAKING
+2026-02-25 14:36:24,555 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:24,555 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:24,556 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:24,694 - INFO - DONE SPEAKING
+2026-02-25 14:36:24,694 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:24,695 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:24,696 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:24,834 - INFO - DONE SPEAKING
+2026-02-25 14:36:24,835 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:24,835 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:24,837 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:24,991 - INFO - DONE SPEAKING
+2026-02-25 14:36:24,992 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:24,992 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:24,993 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,130 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,131 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,131 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,132 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,285 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,286 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,286 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,286 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,425 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,426 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,426 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,427 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,518 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,519 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,519 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,520 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,611 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,612 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,613 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,613 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,703 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,704 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,704 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,705 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,797 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,798 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,798 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,799 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:25,891 - INFO - DONE SPEAKING
+2026-02-25 14:36:25,892 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:25,892 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:25,893 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,046 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,047 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,047 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,048 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,187 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,188 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,189 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,189 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,280 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,284 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,286 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,288 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,436 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,437 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,437 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,439 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,530 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,530 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,531 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,532 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,670 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,671 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,671 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,672 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,812 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,813 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,813 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,814 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:26,953 - INFO - DONE SPEAKING
+2026-02-25 14:36:26,954 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:26,954 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:26,955 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:27,046 - INFO - DONE SPEAKING
+2026-02-25 14:36:27,047 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:27,048 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:27,049 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:27,201 - INFO - DONE SPEAKING
+2026-02-25 14:36:27,201 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:27,202 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:27,203 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:27,357 - INFO - DONE SPEAKING
+2026-02-25 14:36:27,357 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:27,358 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:27,359 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:27,514 - INFO - DONE SPEAKING
+2026-02-25 14:36:27,515 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:27,516 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:27,516 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:27,669 - INFO - DONE SPEAKING
+2026-02-25 14:36:27,669 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:27,670 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:27,671 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:27,811 - INFO - DONE SPEAKING
+2026-02-25 14:36:27,812 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:27,812 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:27,813 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,015 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,016 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,017 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,018 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,109 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,109 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,110 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,111 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,265 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,265 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,266 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,267 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,404 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,405 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,405 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,406 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,497 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,498 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,498 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,499 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,653 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,654 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,654 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,655 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,793 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,794 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,794 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,795 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,885 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,886 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,888 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,891 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:28,994 - INFO - DONE SPEAKING
+2026-02-25 14:36:28,995 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:28,995 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:28,997 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,087 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,088 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,088 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,089 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,166 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,167 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,167 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,168 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,259 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,260 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,260 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,261 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,351 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,352 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,352 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,352 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,491 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,492 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,492 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,493 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,585 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,586 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,586 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,587 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,741 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,742 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,742 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,743 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:29,896 - INFO - DONE SPEAKING
+2026-02-25 14:36:29,897 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:29,897 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:29,898 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,052 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,053 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,054 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,054 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,146 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,147 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,147 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,148 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,286 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,286 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,287 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,288 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,427 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,428 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,428 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,429 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,568 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,569 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,569 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,570 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,660 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,661 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,661 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,662 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,800 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,801 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,801 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,802 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,878 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,879 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,879 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,880 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:30,971 - INFO - DONE SPEAKING
+2026-02-25 14:36:30,971 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:30,972 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:30,973 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,111 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,112 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,112 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,113 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,203 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,204 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,204 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,205 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,360 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,361 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,361 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,362 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,517 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,518 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,518 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,519 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,610 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,610 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,611 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,612 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,751 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,752 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,752 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,753 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,844 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,845 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,845 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,846 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:31,984 - INFO - DONE SPEAKING
+2026-02-25 14:36:31,984 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:31,985 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:31,986 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,124 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,125 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,125 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,126 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,218 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,219 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,219 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,220 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,374 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,375 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,375 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,376 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,544 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,545 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,546 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,546 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,638 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,639 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,640 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,641 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,731 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,732 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,733 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,734 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,825 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,826 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,826 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,827 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:32,919 - INFO - DONE SPEAKING
+2026-02-25 14:36:32,920 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:32,920 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:32,921 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,012 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,013 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,013 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,014 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,105 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,106 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,107 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,108 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,199 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,200 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,200 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,201 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,292 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,293 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,293 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,294 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,385 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,386 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,387 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,388 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,479 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,480 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,480 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,481 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,570 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,571 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,572 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,573 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,662 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,663 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,663 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,664 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,755 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,756 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,756 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,757 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:33,849 - INFO - DONE SPEAKING
+2026-02-25 14:36:33,850 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:33,850 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:33,851 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,005 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,006 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,006 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,008 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,098 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,099 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,099 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,100 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,192 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,193 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,193 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,194 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,285 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,286 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,286 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,287 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,379 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,380 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,380 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,381 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,472 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,473 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,473 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,475 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,566 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,567 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,568 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,569 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,659 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,660 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,661 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,661 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,752 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,753 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,753 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,754 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,845 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,846 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,846 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,847 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:34,939 - INFO - DONE SPEAKING
+2026-02-25 14:36:34,940 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:34,940 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:34,941 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,079 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,080 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,081 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,081 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,173 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,174 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,174 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,175 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,267 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,268 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,268 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,269 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,422 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,423 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,423 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,424 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,562 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,563 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,563 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,564 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,656 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,657 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,657 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,658 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,750 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,751 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,752 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,753 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,843 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,844 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,844 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:35,845 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:35,998 - INFO - DONE SPEAKING
+2026-02-25 14:36:35,999 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:35,999 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:36,000 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:36,092 - INFO - DONE SPEAKING
+2026-02-25 14:36:36,093 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:36,093 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:36,096 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:36,186 - INFO - DONE SPEAKING
+2026-02-25 14:36:36,187 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:36,187 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:36,188 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:36,280 - INFO - DONE SPEAKING
+2026-02-25 14:36:36,280 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:36,281 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:36,282 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:36,419 - INFO - DONE SPEAKING
+2026-02-25 14:36:36,419 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:36,420 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:36,421 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:36,560 - INFO - DONE SPEAKING
+2026-02-25 14:36:36,561 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:36:36,561 - ERROR - Listen error: This audio source is already inside a context manager
+2026-02-25 14:36:36,562 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:36:36,652 - INFO - DONE SPEAKING
+2026-02-25 14:44:33,587 - INFO - SpeechManager ready
+2026-02-25 14:44:34,367 - INFO - Calibrating microphone…
+2026-02-25 14:44:35,467 - INFO - SpeechRecognizer ready
+2026-02-25 14:44:50,494 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 14:44:55,796 - INFO - DONE SPEAKING
+2026-02-25 14:44:55,797 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:01,051 - INFO - Audio captured — sending to Google STT…
+2026-02-25 14:45:02,079 - INFO - HEARD: 'what are you doing'
+2026-02-25 14:45:03,892 - INFO - SPEAKING: I'm sorry, I can't reach the brain right now.
+2026-02-25 14:45:04,045 - INFO - DONE SPEAKING
+2026-02-25 14:45:08,050 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:10,723 - INFO - Audio captured — sending to Google STT…
+2026-02-25 14:45:11,368 - WARNING - COULD NOT UNDERSTAND — audio captured but unclear. Check mic/accent.
+2026-02-25 14:45:11,387 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:45:11,526 - INFO - DONE SPEAKING
+2026-02-25 14:45:11,526 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:15,678 - INFO - Audio captured — sending to Google STT…
+2026-02-25 14:45:16,620 - INFO - HEARD: 'what is'
+2026-02-25 14:45:18,199 - INFO - SPEAKING: I'm sorry, I can't reach the brain right now.
+2026-02-25 14:45:18,352 - INFO - DONE SPEAKING
+2026-02-25 14:45:22,356 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:24,814 - INFO - Audio captured — sending to Google STT…
+2026-02-25 14:45:25,461 - WARNING - COULD NOT UNDERSTAND — audio captured but unclear. Check mic/accent.
+2026-02-25 14:45:25,463 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:45:25,633 - INFO - DONE SPEAKING
+2026-02-25 14:45:25,633 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:28,184 - INFO - Audio captured — sending to Google STT…
+2026-02-25 14:45:29,431 - WARNING - COULD NOT UNDERSTAND — audio captured but unclear. Check mic/accent.
+2026-02-25 14:45:29,432 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:45:29,588 - INFO - DONE SPEAKING
+2026-02-25 14:45:29,589 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:34,267 - INFO - Audio captured — sending to Google STT…
+2026-02-25 14:45:35,085 - WARNING - COULD NOT UNDERSTAND — audio captured but unclear. Check mic/accent.
+2026-02-25 14:45:35,086 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:45:35,257 - INFO - DONE SPEAKING
+2026-02-25 14:45:35,258 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:45:47,303 - WARNING - LISTEN TIMEOUT — no speech detected within timeout
+2026-02-25 14:45:47,306 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:45:47,477 - INFO - DONE SPEAKING
+2026-02-25 14:45:47,477 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:48:53,065 - INFO - SpeechManager ready
+2026-02-25 14:48:53,721 - INFO - Calibrating microphone…
+2026-02-25 14:48:54,748 - INFO - SpeechRecognizer ready
+2026-02-25 14:48:59,608 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 14:49:04,808 - INFO - DONE SPEAKING
+2026-02-25 14:49:04,808 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 14:49:16,862 - WARNING - LISTEN TIMEOUT — no speech detected within timeout
+2026-02-25 14:49:16,866 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 14:49:17,033 - INFO - DONE SPEAKING
+2026-02-25 14:49:17,033 - INFO - LISTENING… (energy threshold: 400)
