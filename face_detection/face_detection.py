@@ -178,6 +178,8 @@ class SpeechManager:
         engine = pyttsx3.init()
         engine.setProperty('rate', 145)
         engine.setProperty('volume', 1.0)
+        voices = engine.getProperty('voices')
+        engine.setProperty('voice', voices[0].id)
 
         while True:
             self._trigger.wait()      # sleep until something is queued
@@ -192,7 +194,8 @@ class SpeechManager:
                 try:
                     logger.info(f"SPEAKING: {text}")
                     engine.say(text)
-                    engine.runAndWait()   # safe — only this thread ever calls this
+                    engine.runAndWait()
+                    time.sleep(3)
                     logger.info("DONE SPEAKING")
                 except Exception as e:
                     logger.error(f"TTS engine error: {e}")
@@ -203,8 +206,10 @@ class SpeechManager:
                     except Exception:
                         pass
                 finally:
+                    
                     if done_event:
-                        done_event.set()   # unblock speak_and_wait() caller
+                        done_event.set()  
+                    time.sleep(2) # unblock speak_and_wait() caller
 
     def speak_and_wait(self, text):
         """Queue text and block the calling thread until it is fully spoken."""

@@ -8985,3 +8985,160 @@ AttributeError: module 'cv2' has no attribute 'VideoCapture'
 2026-02-25 14:49:16,866 - INFO - SPEAKING: I didn't hear you. Can you say that again?
 2026-02-25 14:49:17,033 - INFO - DONE SPEAKING
 2026-02-25 14:49:17,033 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:08:00,354 - INFO - SpeechManager ready
+2026-02-25 15:08:01,309 - INFO - Calibrating microphone…
+2026-02-25 15:08:02,350 - INFO - SpeechRecognizer ready
+2026-02-25 15:08:08,360 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 15:08:13,491 - INFO - DONE SPEAKING
+2026-02-25 15:08:13,491 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:08:15,998 - INFO - Audio captured — sending to Google STT…
+2026-02-25 15:08:16,610 - INFO - HEARD: 'ok mummy bye'
+2026-02-25 15:08:16,611 - INFO - SPEAKING: Goodbye!
+2026-02-25 15:08:16,788 - INFO - DONE SPEAKING
+2026-02-25 15:08:59,621 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 15:08:59,791 - INFO - DONE SPEAKING
+2026-02-25 15:08:59,792 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:09:11,814 - WARNING - LISTEN TIMEOUT — no speech detected within timeout
+2026-02-25 15:09:11,835 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 15:09:11,997 - INFO - DONE SPEAKING
+2026-02-25 15:09:11,998 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:09:31,457 - INFO - SpeechManager ready
+2026-02-25 15:09:32,320 - INFO - Calibrating microphone…
+2026-02-25 15:09:33,371 - INFO - SpeechRecognizer ready
+2026-02-25 15:09:37,403 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 15:09:42,469 - INFO - DONE SPEAKING
+2026-02-25 15:09:42,469 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:09:51,127 - INFO - Audio captured — sending to Google STT…
+2026-02-25 15:09:51,821 - INFO - HEARD: 'good bye'
+2026-02-25 15:09:51,822 - INFO - SPEAKING: Goodbye!
+2026-02-25 15:09:51,963 - INFO - DONE SPEAKING
+2026-02-25 15:22:06,759 - INFO - SpeechManager ready
+2026-02-25 15:22:07,837 - INFO - Calibrating microphone…
+2026-02-25 15:22:08,899 - INFO - SpeechRecognizer ready
+2026-02-25 15:22:19,368 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 15:22:24,438 - INFO - DONE SPEAKING
+2026-02-25 15:22:24,438 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:22:33,455 - INFO - Audio captured — sending to Google STT…
+2026-02-25 15:22:34,103 - INFO - HEARD: 'goodbye'
+2026-02-25 15:22:34,103 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 15:22:34,273 - INFO - DONE SPEAKING
+2026-02-25 15:45:44,307 - INFO - SpeechManager ready
+2026-02-25 15:45:45,440 - INFO - Calibrating microphone…
+2026-02-25 15:45:46,507 - INFO - SpeechRecognizer ready
+2026-02-25 15:45:56,200 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 15:46:01,867 - INFO - DONE SPEAKING
+2026-02-25 15:46:01,868 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:46:03,519 - INFO - Audio captured — sending to Google STT…
+2026-02-25 15:46:04,103 - INFO - HEARD: 'ok bye'
+2026-02-25 15:46:04,104 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 15:46:04,768 - INFO - DONE SPEAKING
+2026-02-25 15:52:00,159 - INFO - SpeechManager ready
+2026-02-25 15:52:01,254 - INFO - Calibrating microphone…
+2026-02-25 15:52:02,321 - INFO - SpeechRecognizer ready
+2026-02-25 15:52:09,671 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 15:52:14,764 - INFO - DONE SPEAKING
+2026-02-25 15:52:15,280 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 15:52:17,278 - INFO - Audio captured — sending to Google STT…
+2026-02-25 15:52:18,088 - INFO - HEARD: 'ok good bye'
+2026-02-25 15:52:18,089 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 15:52:18,274 - INFO - DONE SPEAKING
+2026-02-25 16:49:33,322 - INFO - SpeechManager ready
+2026-02-25 16:49:34,007 - INFO - Calibrating microphone…
+2026-02-25 16:49:35,028 - INFO - SpeechRecognizer ready
+2026-02-25 16:50:02,894 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 16:50:09,419 - INFO - DONE SPEAKING
+2026-02-25 16:50:09,930 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 16:50:11,639 - INFO - Audio captured — sending to Google STT…
+2026-02-25 16:50:11,849 - ERROR - Listen error: Expecting value: line 1 column 1 (char 0)
+2026-02-25 16:50:11,849 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 16:50:13,482 - INFO - DONE SPEAKING
+2026-02-25 16:50:13,997 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 16:50:17,353 - INFO - Audio captured — sending to Google STT…
+2026-02-25 16:50:17,563 - ERROR - Listen error: Expecting value: line 1 column 1 (char 0)
+2026-02-25 16:50:17,564 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 16:50:19,191 - INFO - DONE SPEAKING
+2026-02-25 16:50:19,705 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 16:50:23,399 - INFO - Audio captured — sending to Google STT…
+2026-02-25 16:50:24,124 - INFO - HEARD: 'ok bye'
+2026-02-25 16:50:24,129 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 16:50:25,764 - INFO - DONE SPEAKING
+2026-02-25 17:13:50,219 - INFO - SpeechManager ready
+2026-02-25 17:13:51,151 - INFO - Calibrating microphone…
+2026-02-25 17:13:52,193 - INFO - SpeechRecognizer ready
+2026-02-25 17:13:55,064 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 17:14:01,660 - INFO - DONE SPEAKING
+2026-02-25 17:14:02,174 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:14:07,581 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:14:08,486 - INFO - HEARD: 'what is'
+2026-02-25 17:14:09,956 - INFO - SPEAKING: I'm sorry, I can't reach the brain right now.
+2026-02-25 17:14:11,604 - INFO - DONE SPEAKING
+2026-02-25 17:14:16,125 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:14:21,114 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:14:23,905 - INFO - HEARD: 'ok good bye'
+2026-02-25 17:14:23,906 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 17:14:25,552 - INFO - DONE SPEAKING
+2026-02-25 17:17:57,805 - INFO - SpeechManager ready
+2026-02-25 17:17:58,514 - INFO - Calibrating microphone…
+2026-02-25 17:17:59,552 - INFO - SpeechRecognizer ready
+2026-02-25 17:18:03,356 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 17:18:09,865 - INFO - DONE SPEAKING
+2026-02-25 17:18:11,873 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:18:18,247 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:18:19,069 - INFO - HEARD: 'ok good bye'
+2026-02-25 17:18:19,069 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 17:18:20,706 - INFO - DONE SPEAKING
+2026-02-25 17:21:34,096 - INFO - SpeechManager ready
+2026-02-25 17:21:34,977 - INFO - Calibrating microphone…
+2026-02-25 17:21:36,014 - INFO - SpeechRecognizer ready
+2026-02-25 17:21:40,313 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 17:21:46,901 - INFO - DONE SPEAKING
+2026-02-25 17:21:46,911 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:21:48,878 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:21:49,514 - INFO - HEARD: 'good bye'
+2026-02-25 17:21:49,515 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 17:21:51,176 - INFO - DONE SPEAKING
+2026-02-25 17:25:39,257 - INFO - SpeechManager ready
+2026-02-25 17:25:40,044 - INFO - Calibrating microphone…
+2026-02-25 17:25:41,087 - INFO - SpeechRecognizer ready
+2026-02-25 17:25:51,327 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 17:25:57,912 - INFO - DONE SPEAKING
+2026-02-25 17:25:57,912 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:26:01,712 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:26:02,437 - INFO - HEARD: 'ok good bye'
+2026-02-25 17:26:02,438 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 17:26:04,082 - INFO - DONE SPEAKING
+2026-02-25 17:26:30,218 - INFO - SpeechManager ready
+2026-02-25 17:26:30,577 - INFO - Calibrating microphone…
+2026-02-25 17:26:31,618 - INFO - SpeechRecognizer ready
+2026-02-25 17:26:34,842 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 17:26:41,351 - INFO - DONE SPEAKING
+2026-02-25 17:26:41,351 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:26:43,249 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:26:43,880 - WARNING - COULD NOT UNDERSTAND — audio captured but unclear. Check mic/accent.
+2026-02-25 17:26:43,881 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-02-25 17:26:45,528 - INFO - DONE SPEAKING
+2026-02-25 17:26:45,529 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:26:49,498 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:26:50,453 - INFO - HEARD: 'ok good bye'
+2026-02-25 17:26:50,454 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 17:26:52,090 - INFO - DONE SPEAKING
+2026-02-25 17:32:37,855 - INFO - SpeechManager ready
+2026-02-25 17:32:38,634 - INFO - Calibrating microphone…
+2026-02-25 17:32:39,669 - INFO - SpeechRecognizer ready
+2026-02-25 17:32:49,444 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 17:33:00,455 - INFO - DONE SPEAKING
+2026-02-25 17:33:00,456 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 17:33:03,399 - INFO - Audio captured — sending to Google STT…
+2026-02-25 17:33:04,154 - INFO - HEARD: 'ok good bye'
+2026-02-25 17:33:04,155 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 17:33:05,802 - INFO - DONE SPEAKING
+2026-02-25 19:10:00,560 - INFO - SpeechManager ready
+2026-02-25 19:10:01,981 - INFO - Calibrating microphone…
+2026-02-25 19:10:03,018 - INFO - SpeechRecognizer ready
+2026-02-25 19:10:13,265 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-25 19:10:21,351 - INFO - DONE SPEAKING
+2026-02-25 19:10:21,351 - INFO - LISTENING… (energy threshold: 400)
+2026-02-25 19:10:33,529 - INFO - Audio captured — sending to Google STT…
+2026-02-25 19:10:36,316 - INFO - HEARD: 'ok bye'
+2026-02-25 19:10:36,316 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-25 19:10:39,460 - INFO - DONE SPEAKING

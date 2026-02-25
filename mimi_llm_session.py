@@ -85,7 +85,7 @@ class MimiLLMSession:
             return text
         except Exception as e:
             logger.error('OpenAI call failed: %s', e)
-            return None
+            return ""
 
     def _call_anthropic(self, prompt):
         api_key = self.anthropic_key
@@ -199,9 +199,10 @@ class MimiLLMSession:
                 continue
 
             lower = user_text.lower()
-            if any(term in lower for term in ['bye', 'thank you', 'ok mimi', 'ok thank you']):
+            if any(term in lower for term in ['bye', 'thank you', 'ok mimi', 'ok thank you', 'ok mimi bye', 'stop mimi']):
                 self.current_action = 'speaking'
-                self.speech.speak_and_wait('Goodbye!')
+                self.speech.speak_and_wait('Goodbye! See you soon. Take care!')
+                time.sleep(3)
                 self.current_action = 'idle'
                 return
 
