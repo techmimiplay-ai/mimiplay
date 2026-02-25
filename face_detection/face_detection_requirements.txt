@@ -1,0 +1,21 @@
+# Core dependencies for Face Recognition Attendance System
+opencv-python==4.10.0.84
+face-recognition==1.3.0
+dlib==19.24.6
+Pillow==10.4.0
+numpy==1.26.4
+pyttsx3==2.98
+
+# Speech Recognition (NEW)
+SpeechRecognition==3.10.4
+PyAudio==0.2.14
+
+# Sentiment Analysis (NEW)
+textblob==0.18.0.post0
+
+# Additional dependencies
+face-recognition-models==0.3.0
+click==8.1.7
+
+flask
+flask_cors
