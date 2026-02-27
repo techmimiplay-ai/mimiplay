@@ -174,15 +174,14 @@ class SpeechManager:
         logger.info("SpeechManager ready")
 
     def _worker(self):
-        """The ONE thread that ever calls engine.runAndWait()."""
-        engine = pyttsx3.init()
-        engine.setProperty('rate', 100)
-        engine.setProperty('volume', 1.0)
-        voices = engine.getProperty('voices')
-        engine.setProperty('voice', voices[0].id)
+        """The ONE thread that plays audio using gTTS + pygame."""
+        import pygame
+        from gtts import gTTS
+        import tempfile
+        pygame.mixer.init()
 
         while True:
-            self._trigger.wait()      # sleep until something is queued
+            self._trigger.wait()
             self._trigger.clear()
 
             while True:
@@ -193,21 +192,22 @@ class SpeechManager:
 
                 try:
                     logger.info(f"SPEAKING: {text}")
-                    engine.say(text)
-                    engine.runAndWait()
+                    tts = gTTS(text=text, lang='en', tld='co.in')
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+                        tmp_path = f.name
+                    tts.save(tmp_path)
+                    pygame.mixer.music.load(tmp_path)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.wait(100)
+                    pygame.mixer.music.unload()
+                    os.remove(tmp_path)
                     logger.info("DONE SPEAKING")
                 except Exception as e:
                     logger.error(f"TTS engine error: {e}")
-                    try:
-                        engine = pyttsx3.init()
-                        engine.setProperty('rate', 100)
-                        engine.setProperty('volume', 1.0)
-                    except Exception:
-                        pass
                 finally:
-                    
                     if done_event:
-                        done_event.set()  
+                        done_event.set()
                     # unblock speak_and_wait() caller
 
     def speak_and_wait(self, text):
