@@ -9833,3 +9833,72 @@ AttributeError: module 'cv2' has no attribute 'VideoCapture'
 2026-02-27 13:52:47,505 - INFO - HEARD: 'how r u'
 2026-02-27 13:52:49,042 - INFO - SPEAKING: I'm sorry, I can't reach the brain right now.
 2026-02-27 13:52:53,018 - INFO - DONE SPEAKING
+2026-02-28 11:47:29,955 - INFO - AttendanceManager ready
+2026-02-28 11:47:29,957 - INFO - SpeechManager ready
+2026-02-28 11:47:31,002 - INFO - Calibrating microphone…
+2026-02-28 11:47:32,059 - INFO - SpeechRecognizer ready
+2026-02-28 11:47:32,060 - INFO - ============================================================
+2026-02-28 11:47:32,060 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-02-28 11:47:32,060 - INFO - ============================================================
+2026-02-28 11:47:33,564 - INFO - Loaded: Dron
+2026-02-28 11:47:34,873 - INFO - Loaded: ghanisht
+2026-02-28 11:47:36,228 - INFO - Loaded: Nishit
+2026-02-28 11:47:37,659 - INFO - Loaded: Rahil
+2026-02-28 11:47:38,911 - INFO - Loaded: Shikha
+2026-02-28 11:47:39,859 - INFO - Loaded: Tushar
+2026-02-28 11:47:41,737 - INFO - Loaded: vini
+2026-02-28 11:47:43,106 - INFO - Loaded: vini
+2026-02-28 11:47:43,106 - INFO - Known people (8): Dron, ghanisht, Nishit, Rahil, Shikha, Tushar, vini, vini
+2026-02-28 11:47:43,108 - INFO - SpeechManager ready
+2026-02-28 11:47:43,449 - INFO - Calibrating microphone…
+2026-02-28 11:47:44,489 - INFO - SpeechRecognizer ready
+2026-02-28 11:48:00,103 - INFO - Camera started
+2026-02-28 11:48:02,694 - INFO - SPEAKING: Hi Rahil! How are you today?
+2026-02-28 11:48:06,148 - INFO - DONE SPEAKING
+2026-02-28 11:48:06,149 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:48:08,847 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:48:10,494 - INFO - HEARD: 'I am fine'
+2026-02-28 11:48:10,495 - INFO - Mood → Happy (matched 'fine')
+2026-02-28 11:48:10,496 - INFO - ATTENDANCE MARKED: Rahil | 11:48:10 | Happy
+2026-02-28 11:48:10,496 - INFO - SPEAKING: Great! Attendance marked. Have a wonderful day Rahil!
+2026-02-28 11:48:15,849 - INFO - DONE SPEAKING
+2026-02-28 11:48:21,893 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-28 11:48:26,394 - INFO - DONE SPEAKING
+2026-02-28 11:48:26,394 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:48:30,105 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:48:31,583 - INFO - HEARD: 'how'
+2026-02-28 11:48:34,624 - INFO - SPEAKING: Kya aap mujhe batayenge ki aap kis cheez ke baare mein padhna chahte hain? Chalo, kuch mazedaar baatein karte hain!
+2026-02-28 11:48:44,726 - INFO - DONE SPEAKING
+2026-02-28 11:48:48,729 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:48:52,119 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:48:52,842 - INFO - HEARD: 'what is'
+2026-02-28 11:48:54,763 - INFO - SPEAKING: Kya aap mujhse kuch specific padhna chahte ho? Chalo, kuch interesting baatein karte hain!
+2026-02-28 11:49:02,497 - INFO - DONE SPEAKING
+2026-02-28 11:49:06,500 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:49:09,378 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:49:10,093 - INFO - HEARD: 'what is Sun'
+2026-02-28 11:49:13,568 - INFO - SPEAKING: Sun ek bada, garam star hai! Wo din mein chamakta hai. Kya aapko suraj ki roshni pasand hai?
+2026-02-28 11:49:22,428 - INFO - DONE SPEAKING
+2026-02-28 11:49:26,431 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:49:30,408 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:49:31,303 - INFO - HEARD: 'mera naam kya hai'
+2026-02-28 11:49:34,717 - INFO - SPEAKING: Mujhe nahi pata aapka naam! Aap mujhe apna naam bata sakte ho? 😊
+2026-02-28 11:49:41,797 - INFO - DONE SPEAKING
+2026-02-28 11:49:45,799 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:49:50,126 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:49:55,376 - INFO - HEARD: 'chat kaise meow karti hai'
+2026-02-28 11:49:58,705 - INFO - SPEAKING: Cats meow karte hain jaise 'meow, meow!' Wo bahut cute hote hain! Kya aapko cats pasand hain?
+2026-02-28 11:50:07,998 - INFO - DONE SPEAKING
+2026-02-28 11:50:11,999 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:50:15,019 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:50:16,065 - INFO - HEARD: 'han mere ko cats pasand hai'
+2026-02-28 11:50:19,377 - INFO - SPEAKING: Wah! Cats bahut cute hoti hain! Kya aapne kabhi chhoti kitten dekhi hai?
+2026-02-28 11:50:26,474 - INFO - DONE SPEAKING
+2026-02-28 11:50:30,476 - INFO - LISTENING… (energy threshold: 400)
+2026-02-28 11:50:34,079 - INFO - Audio captured — sending to Google STT…
+2026-02-28 11:50:34,918 - INFO - HEARD: 'ok bye Alexa'
+2026-02-28 11:50:34,919 - INFO - SPEAKING: Goodbye! See you soon. Take care!
+2026-02-28 11:50:38,879 - INFO - DONE SPEAKING
+2026-02-28 11:50:59,853 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-02-28 11:51:04,268 - INFO - DONE SPEAKING
+2026-02-28 11:51:04,269 - INFO - LISTENING… (energy threshold: 400)
