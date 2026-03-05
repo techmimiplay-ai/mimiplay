@@ -87,8 +87,10 @@ def mimi_get():
     try:
         resp = {
             'text': getattr(mimi_system, 'current_text', None),
-            'image_url': getattr(mimi_system, 'current_image', None),
-            'yt_video': getattr(mimi_system, 'current_video', None),
+            # 'image_url': getattr(mimi_system, 'current_image', None),
+            # 'yt_video': getattr(mimi_system, 'current_video', None),
+            'image_url': getattr(mimi_system, 'image_url', None),  # <-- 'current_image' ko 'image_url' kiya
+            'yt_video': getattr(mimi_system, 'yt_video', None),    # <-- 'current_video' ko 'yt_video' kiya
             'action': getattr(mimi_system, 'current_action', 'idle')
         }
         return jsonify(resp)

@@ -61,9 +61,10 @@ class MimiLLMSession:
             "Always be encouraging and upbeat.\n\n"
             "RESPONSE FORMAT: Always reply with a JSON object only. Keys: text, image_url, yt_video.\n"
             "- 'text': 1-2 short simple sentences. No questions. Just a clear, friendly definition or explanation.\n"
-            "- 'image_url': a real working image URL related to the topic. Always try to include one.\n"
-            "- 'yt_video': a real YouTube video URL only if the topic needs detailed explanation, a poem, a song, or a story. Otherwise null.\n"
-            "Example: {\"text\": \"Elephant ek bahut bada janwar hai! Uski lambi naak hoti hai jise trunk kehte hain.\", \"image_url\": \"https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg\", \"yt_video\": null}"
+            "- 'image_url': Always use Wikipedia Commons URLs only in this exact format: 'https://upload.wikimedia.org/wikipedia/commons/[path]/[filename.jpg]'. Example: 'https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg'. Only Wikipedia Commons URLs are allowed.\n"
+            "- yt_video: Only include for poems, songs, stories or detailed explanations. Use this exact YouTube URL format: 'https://www.youtube.com/watch?v=[video_id]'. Example for elephant song: 'https://www.youtube.com/watch?v=3HfC0Dg8nWg'. Only provide if you are confident the video exists. Otherwise null.\n"
+            "Example 1 (no video): {\"text\": \"Elephant ek bahut bada janwar hai! Uski lambi naak hoti hai jise trunk kehte hain.\", \"image_url\": \"https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg\", \"yt_video\": null}\n"
+            "Example 2 (with video): {\"text\": \"Suraj ek sitara hai jo humein roshni aur garmi deta hai!\", \"image_url\": \"https://upload.wikimedia.org/wikipedia/commons/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory.jpg\", \"yt_video\": \"https://www.youtube.com/watch?v=3HfC0Dg8nWg\"}"
         )
         body = {
             'model': 'gpt-4o-mini',

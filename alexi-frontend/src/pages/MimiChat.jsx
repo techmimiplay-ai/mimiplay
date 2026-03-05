@@ -35,10 +35,19 @@ const MimiChat = () => {
       try {
         const res = await axios.get(API_ENDPOINTS.GET_MIMI_STATUS)
         const d = res.data
-        setMimiText(d.text)
-        setImageUrl(d.image_url)
-        setYtVideo(d.yt_video)
-        setSessionState(d.action || 'idle')
+        // setMimiText(d.text)
+        // setImageUrl(d.image_url)
+        // setYtVideo(d.yt_video)
+        // setSessionState(d.action || 'idle')
+        if (d.text === "Thinking..." || !d.text) {
+            // Wait for LLM to finish
+        } else {
+            // 2. Sirf tab update karo jab naya text aaye
+            setMimiText(d.text);
+            setImageUrl(d.image_url);
+            setYtVideo(d.yt_video);
+            setSessionState(d.action || 'idle');
+        }
         if (d.action === 'playing_video' && d.yt_video) setPlaying(true)
       } catch (e) {
         console.error('Mimi poll error', e)
@@ -80,7 +89,7 @@ const MimiChat = () => {
         const u = new SpeechSynthesisUtterance(mimiText || displayedText)
         u.lang = 'en-US'
         u.rate = 0.95
-        window.speechSynthesis.speak(u)
+        // window.speechSynthesis.speak(u)
       }
     } catch (e) {
       console.warn('Browser TTS failed', e)
@@ -155,7 +164,7 @@ const MimiChat = () => {
               </p>
               {imageUrl && (
                 <div className="mt-4">
-                  <img src={imageUrl} alt="mimi result" className="max-h-64 mx-auto rounded-md" />
+                  <img src={imageUrl} alt="mimi result" referrerPolicy="no-referrer" className="max-h-64 mx-auto rounded-md"  />
                 </div>
               )}
               {ytVideo && (
