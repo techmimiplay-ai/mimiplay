@@ -10,6 +10,7 @@ import MimiChat from '../pages/MimiChat';
 
 // Teacher Pages
 import TeacherDashboard from '../pages/teacher/TeacherDashboard';
+import TeacherSelection from '../pages/teacher/TeacherSelection';
 
 // Parent Pages
 import ParentPortal from '../pages/parent/ParentPortal';
@@ -37,6 +38,7 @@ const AppRoutes = () => {
       
       {/* Teacher Dashboard */}
       <Route path="/teacher/*" element={<TeacherDashboard />} />
+      <Route path="/teacher/selection" element={<TeacherSelection />} />
       
       {/* Parent Portal */}
       <Route path="/parent/*" element={<ParentPortal />} />

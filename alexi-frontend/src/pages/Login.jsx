@@ -97,7 +97,8 @@ const Login = () => {
       
       // Navigate based on detected role
       if (userRole === 'teacher') {
-        navigate('/teacher/home');
+        // navigate('/teacher/home');
+        navigate('/teacher/selection');
       } else if (userRole === 'parent') {
         navigate('/parent/home');
       } else if (userRole === 'admin') {
