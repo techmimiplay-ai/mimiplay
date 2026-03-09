@@ -132,7 +132,7 @@ const MimiChat = () => {
 
       {/* Mimi video (animates left when showing a response) */}
       <motion.div
-        className="absolute bottom-0 z-30 w-[520px] h-[520px]"
+        className="absolute bottom-0 z-50 w-[520px] h-[520px]"
         animate={mimiText ? { left: '12px', x: 0 } : { left: '50%', x: '-50%' }}
         transition={{ type: 'spring', stiffness: 120, damping: 18 }}
         style={{ position: 'absolute' }}
@@ -148,7 +148,7 @@ const MimiChat = () => {
       </motion.div>
 
       {/* White response box */}
-      <div className="absolute top-32 left-1/2 -translate-x-1/2 z-40 w-[700px] pointer-events-none">
+      <div className="absolute top-32 left-[440px] z-40 w-[700px] pointer-events-none">
         <AnimatePresence>
           {(mimiText || imageUrl || ytVideo) && (
             <motion.div
