@@ -82,15 +82,33 @@ const Register = () => {
     
     setLoading(true);
     
-    setTimeout(() => {
-      console.log('Register data:', formData);
-      alert('Registration successful! (Pending admin approval)');
+    // setTimeout(() => {
+    //   console.log('Register data:', formData);
+    //   alert('Registration successful! (Pending admin approval)');
       
-      // ↓↓↓ UPDATED: Navigate to login after successful registration
-      navigate('/login');
+    //   // ↓↓↓ UPDATED: Navigate to login after successful registration
+    //   navigate('/login');
       
+    //   setLoading(false);
+    // }, 1500);
+    try {
+      const res = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.msg);
+
+      alert("Registered! Wait for admin approval.");
+      navigate("/login");
+    } catch (err) {
+      alert(err.message);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

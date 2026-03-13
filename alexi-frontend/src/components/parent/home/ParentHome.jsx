@@ -167,18 +167,45 @@ import { useStars } from '../../../context/StarContext';
 // Must match the studentId used in ActivitiesTab + StudentList
 const STUDENT_ID = 'student-1';
 
-const ParentHome = () => {
+const ParentHome = ({ selectedChild }) => {
   const { getTotalStars, getTodayStars, getTodayActivities, getStudentResults } = useStars();
 
-  const totalStars      = getTotalStars(STUDENT_ID);
-  const todayStars      = getTodayStars(STUDENT_ID);
-  const todayCount      = getTodayActivities(STUDENT_ID);
-  const allResults      = getStudentResults(STUDENT_ID);
+  const totalStars = getTotalStars(STUDENT_ID);
+  const todayStars = getTodayStars(STUDENT_ID);
+  const todayCount = getTodayActivities(STUDENT_ID);
+  const allResults = getStudentResults(STUDENT_ID);
 
   // Flash banner when new result arrives
   const prevCountRef = useRef(allResults.length);
   const [showLiveBanner, setShowLiveBanner] = useState(false);
   const [latestResult, setLatestResult] = useState(null);
+  const [childData, setChildData] = useState(null);
+
+  // useEffect(() => {
+  //   if (!selectedChild) return;
+
+  //   const fetchChild = async () => {
+  //     try {
+  //       const res = await fetch(`http://localhost:5000/api/student/${selectedChild.id}`);
+  //       const data = await res.json();
+
+  //       if (res.ok) {
+  //         setChildData(data);
+  //       }
+  //     } catch (err) {
+  //       console.error("Error fetching child:", err);
+  //     }
+  //   };
+
+  //   fetchChild();
+  // }, [selectedChild]);
+
+  useEffect(() => {
+    if (selectedChild) {
+      setChildData(selectedChild);
+    }
+  }, [selectedChild]);
+
   useEffect(() => {
     if (allResults.length > prevCountRef.current) {
       setLatestResult(allResults[0]);
@@ -200,17 +227,17 @@ const ParentHome = () => {
     ? (todayResults.reduce((s, r) => s + r.stars, 0) / todayResults.length).toFixed(1)
     : '—';
 
-  const childData = {
-    name:          'Aarav Sharma',
-    class:         'Junior KG-A',
-    rollNo:        '001',
-    weeklyStreak:  5,
-  };
+  // const childData = {
+  //   name:          'Aarav Sharma',
+  //   class:         'Junior KG-A',
+  //   rollNo:        '001',
+  //   weeklyStreak:  5,
+  // };
 
   const achievements = [
-    { icon: '🌟', title: 'Perfect Week',  description: '5 day streak!'     },
-    { icon: '💯', title: '100% Score',    description: 'Alphabet mastery'  },
-    { icon: '🎨', title: 'Color Expert',  description: 'All colors learned' },
+    { icon: '🌟', title: 'Perfect Week', description: '5 day streak!' },
+    { icon: '💯', title: '100% Score', description: 'Alphabet mastery' },
+    { icon: '🎨', title: 'Color Expert', description: 'All colors learned' },
   ];
 
   return (
@@ -219,7 +246,7 @@ const ParentHome = () => {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-text mb-2">Hi, Welcome! 👋</h1>
-        <p className="text-text/60">Track {childData.name}'s learning journey</p>
+        <p className="text-text/60">Track {childData?.name}'s learning journey</p>
       </div>
 
       {/* ⚡ LIVE new result banner */}
@@ -247,8 +274,8 @@ const ParentHome = () => {
       <Card className="bg-gradient-to-r from-primary-400 to-secondary-400 text-white border-0">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold mb-2">{childData.name}</h2>
-            <p className="text-white/90 mb-1">{childData.class} · Roll No: {childData.rollNo}</p>
+            <h2 className="text-3xl font-bold mb-2">{childData?.name}</h2>
+            <p className="text-white/90 mb-1">{childData?.class} · Roll No: {childData?.rollNo}</p>
             <div className="flex items-center gap-2 mt-3">
               <div className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-sm font-semibold">
                 ✅ Present Today
@@ -294,7 +321,7 @@ const ParentHome = () => {
               <TrendingUp size={20} className="text-purple-700" />
               <p className="text-sm text-purple-700 font-semibold">Streak</p>
             </div>
-            <p className="text-4xl font-bold text-purple-900">{childData.weeklyStreak}</p>
+            {/* <p className="text-4xl font-bold text-purple-900">{childData.weeklyStreak}</p> */}
             <p className="text-xs text-purple-700 mt-1">Days 🔥</p>
           </Card>
 

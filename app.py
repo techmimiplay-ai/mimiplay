@@ -638,12 +638,24 @@
 
 
 from flask import Flask, jsonify, request
+from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 import threading
 import json
 import re
 import os
 import csv
+from pymongo import MongoClient  # MongoDB ke liye import
+from datetime import datetime
+from bson import ObjectId
+from bson.json_util import dumps
+from routes.auth_routes import auth_bp
+from routes.admin_routes import admin_bp
+from routes.whatsapp_route import whatsapp_bp
+from routes.parent_routes import parent_bp
+from extensions import users, attendance_collection, bcrypt
+import jwt
+
 
 try:
     # Prefer the face_detection module inside the face_detection/ folder
@@ -908,6 +920,18 @@ QUESTION_PROMPTS = {
 #         })
 #     except Exception as e:
 #         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/get-attendance-logs', methods=['GET'])
+def get_attendance_logs():
+    try:
+        # MongoDB se saara data nikalna (latest records pehle)
+        logs = list(attendance_collection.find({}, {"_id": 0}).sort("date", -1))
+        return jsonify({
+            "status": "success",
+            "data": logs
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/start-classroom', methods=['GET'])
@@ -1441,6 +1465,23 @@ def get_attendance():
         return jsonify({"status": "success", "records": records})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/check-attendance', methods=['POST'])
+def check_attendance():
+
+    data = request.json
+    name = data.get("student_name")
+
+    if system.attendance.is_marked(name):
+        return jsonify({"message": "already_marked"})
+    else:
+        return jsonify({"message": "not_marked"})
+
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(whatsapp_bp)
+app.register_blueprint(parent_bp)
 
 
 if __name__ == "__main__":
