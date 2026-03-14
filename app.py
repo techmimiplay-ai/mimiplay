@@ -1398,33 +1398,72 @@ def generate_activity_questions():
         return jsonify({"error": str(e)}), 500
 
 
+# @app.route('/save-activity-result', methods=['POST'])
+# def save_activity_result():
+#     """
+#     Save student activity result to local JSON file.
+#     Body: { student_id, student_name, activity_id, activity_name, stars, score }
+#     """
+#     try:
+#         from datetime import datetime
+#         data  = request.get_json() or {}
+#         entry = {
+#             "id":            int(datetime.now().timestamp() * 1000),
+#             "student_id":    data.get("student_id",    "student-1"),
+#             "student_name":  data.get("student_name",  "Student"),
+#             "activity_id":   data.get("activity_id",   0),
+#             "activity_name": data.get("activity_name", "Activity"),
+#             "stars":         min(5, max(0, int(data.get("stars",  0)))),
+#             "score":         int(data.get("score", 0)),
+#             "timestamp":     datetime.now().isoformat(),
+#             "date":          datetime.now().strftime("%a %b %d %Y"),
+#         }
+#         results = load_results()
+#         results.insert(0, entry)
+#         save_results(results)
+#         return jsonify({"status": "success", "entry": entry})
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/save-activity-result', methods=['POST'])
 def save_activity_result():
-    """
-    Save student activity result to local JSON file.
-    Body: { student_id, student_name, activity_id, activity_name, stars, score }
-    """
     try:
         from datetime import datetime
-        data  = request.get_json() or {}
+        from extensions import users  # ya jo bhi tumhara DB collection import hai
+
+        data = request.get_json() or {}
+
         entry = {
-            "id":            int(datetime.now().timestamp() * 1000),
-            "student_id":    data.get("student_id",    "student-1"),
             "student_name":  data.get("student_name",  "Student"),
+            "student_id":    data.get("student_id",    "student-1"),
             "activity_id":   data.get("activity_id",   0),
             "activity_name": data.get("activity_name", "Activity"),
             "stars":         min(5, max(0, int(data.get("stars",  0)))),
             "score":         int(data.get("score", 0)),
             "timestamp":     datetime.now().isoformat(),
-            "date":          datetime.now().strftime("%a %b %d %Y"),
+            "date":          datetime.now().strftime("%Y-%m-%d"),
+            "time":          datetime.now().strftime("%H:%M:%S"),
         }
+
+        # ── 1. MongoDB mein save karo ──────────────────────────────
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        activity_collection = db["activity_results"]
+        activity_collection.insert_one(entry)
+
+        # ── 2. Local JSON file mein bhi rakho (backup) ─────────────
+        json_entry = {**entry, "id": int(datetime.now().timestamp() * 1000)}
         results = load_results()
-        results.insert(0, entry)
+        results.insert(0, json_entry)
         save_results(results)
+
+        # MongoDB ka _id remove karo response se
+        entry.pop("_id", None)
+
         return jsonify({"status": "success", "entry": entry})
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 @app.route('/get-student-stars/<student_id>', methods=['GET'])
 def get_student_stars(student_id):
@@ -1513,7 +1552,79 @@ def register_face():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-        
+
+@app.route('/get-student-id-by-name', methods=['POST'])
+def get_student_id_by_name():
+    try:
+        data = request.get_json() or {}
+        name = (data.get("name") or "").strip()
+        if not name:
+            return jsonify({"status": "error", "message": "Name required"}), 400
+
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        students_col = db["students"]
+
+        # Case-insensitive search karo naam se
+        student = students_col.find_one(
+            {"name": {"$regex": f"^{name}$", "$options": "i"}}
+        )
+
+        if student:
+            return jsonify({
+                "status": "found",
+                "student_id": str(student["_id"]),
+                "student_name": student.get("name", name)
+            })
+        else:
+            return jsonify({
+                "status": "not_found",
+                "student_id": None
+            })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/mark-attendance', methods=['POST'])
+def mark_attendance():
+    try:
+        data = request.get_json() or {}
+        name = data.get("student_name", "").strip()
+        mood = data.get("mood", "Neutral")
+
+        if not name:
+            return jsonify({"message": "error", "reason": "name required"}), 400
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+
+        # Already marked check
+        existing = db["attendance"].find_one({"name": name, "date": today})
+        if existing:
+            return jsonify({"message": "already_marked"})
+
+        # Students collection se real _id lo
+        student = db["students"].find_one(
+            {"name": {"$regex": f"^{name}$", "$options": "i"}}
+        )
+        student_id = student["_id"] if student else None
+
+        # Attendance save karo
+        db["attendance"].insert_one({
+            "student_id": student_id,   # ✅ Real MongoDB ObjectId
+            "name":       name,
+            "date":       today,
+            "time":       datetime.now().strftime("%H:%M:%S"),
+            "mood":       mood
+        })
+
+        print(f"[mark-attendance] ✅ {name} | student_id: {student_id} | mood: {mood}")
+        return jsonify({"message": "marked"})
+
+    except Exception as e:
+        print(f"[mark-attendance] ERROR: {e}")
+        return jsonify({"message": "error", "reason": str(e)}), 500        
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(whatsapp_bp)

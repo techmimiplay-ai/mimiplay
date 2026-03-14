@@ -611,31 +611,38 @@ class AttendanceManager:
 
     def mark(self, name, mood="Neutral"):
         today = datetime.now().strftime("%Y-%m-%d")
-        
-        # Check karein agar record pehle se hai
+
+        # Already marked check
         existing = self.collection.find_one({
-            "student_name": name,
+            "name": name,
             "date": today
         })
-
-        
         if existing:
             print("Attendance already marked")
             return {"message": "already_marked"}
-            
-        # Naya record insert karein
+
+        # Students collection se real _id lo
+        students_col = self.db["students"]
+        student = students_col.find_one(
+            {"name": {"$regex": f"^{name}$", "$options": "i"}}
+        )
+
+        student_id = student["_id"] if student else None
+
         self.collection.insert_one({
-            "student_name": name,
-            "date": today,
-            "time": datetime.now().strftime("%H:%M:%S"),
-            "mood": mood
+            "student_id":   student_id,   # ✅ Real MongoDB ObjectId
+            "name":         name,
+            "date":         today,
+            "time":         datetime.now().strftime("%H:%M:%S"),
+            "mood":         mood
         })
+        print(f"Attendance marked: {name} | student_id: {student_id}")
         return True
+
 
     def is_marked(self, name):
         today = datetime.now().strftime("%Y-%m-%d")
-        return self.collection.find_one({"student_name": name, "date": today}) is not None
-
+        return self.collection.find_one({"name": name, "date": today}) is not None
 # ============================================================================
 # SPEECH MANAGER
 # FIX: No threading.Lock — that caused a deadlock inside the conversation

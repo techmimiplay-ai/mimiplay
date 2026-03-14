@@ -1,46 +1,12 @@
 [
   {
-    "id": 1773467857895,
-    "student_id": "student-vini",
     "student_name": "Vini",
-    "activity_id": 12,
-    "activity_name": "Quiz Mode",
-    "stars": 4,
-    "score": 73,
-    "timestamp": "2026-03-14T11:27:37.895550",
-    "date": "Sat Mar 14 2026"
-  },
-  {
-    "id": 1773467635794,
-    "student_id": "student-vini",
-    "student_name": "Vini",
-    "activity_id": 2,
-    "activity_name": "Phonics Basics",
-    "stars": 2,
-    "score": 50,
-    "timestamp": "2026-03-14T11:23:55.794098",
-    "date": "Sat Mar 14 2026"
-  },
-  {
-    "id": 1773407293060,
-    "student_id": "student-nishit",
-    "student_name": "Nishit",
-    "activity_id": 2,
-    "activity_name": "Phonics Basics",
-    "stars": 1,
-    "score": 17,
-    "timestamp": "2026-03-13T18:38:13.060363",
-    "date": "Fri Mar 13 2026"
-  },
-  {
-    "id": 1773407212452,
-    "student_id": "student-vini",
-    "student_name": "Vini",
-    "activity_id": 2,
-    "activity_name": "Phonics Basics",
-    "stars": 1,
-    "score": 17,
-    "timestamp": "2026-03-13T18:36:52.452403",
-    "date": "Fri Mar 13 2026"
-  }
-]
+    "student_id": "69aa90eb1ea42ce8211b9274",
+    "activity_id": 10,
+    "activity_name": "Counting Game",
+    "stars": 5,
+    "score": 100,
+    "timestamp": "2026-03-14T15:30:34.948640",
+    "date": "2026-03-14",
+    "time": "15:30:34",
+    "_id": 

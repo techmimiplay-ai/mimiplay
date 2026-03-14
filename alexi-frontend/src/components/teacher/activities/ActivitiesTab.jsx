@@ -804,19 +804,19 @@ function MimiActivityOverlay({ activity, difficulty, onStudentDone, onClose }) {
 
   // On mount: open camera (no demo fallback — waits for a real saved face)
   useEffect(() => {
-  intentionalStopRef.current = false;
-  startCameraPoll(true);
+    intentionalStopRef.current = false;
+    startCameraPoll(true);
 
-  return () => {
-    clearInterval(pollRef.current);
-    // Only stop the camera if this is a real unmount (not StrictMode remount)
-    // We use a small delay so StrictMode's immediate remount can restart it
-    setTimeout(() => {
-      if (!intentionalStopRef.current) return; // component remounted, don't stop
-      axios.get(API_ENDPOINTS.STOP_FACE_DETECT).catch(() => {});
-    }, 100);
-  };
-}, []); // eslint-disable-line
+    return () => {
+      clearInterval(pollRef.current);
+      // Only stop the camera if this is a real unmount (not StrictMode remount)
+      // We use a small delay so StrictMode's immediate remount can restart it
+      setTimeout(() => {
+        if (!intentionalStopRef.current) return; // component remounted, don't stop
+        axios.get(API_ENDPOINTS.STOP_FACE_DETECT).catch(() => { });
+      }, 100);
+    };
+  }, []); // eslint-disable-line
 
   // After each student: reset and open camera again for next student
   const resetForNextStudent = useCallback(() => {
@@ -1285,8 +1285,8 @@ function MimiActivityOverlay({ activity, difficulty, onStudentDone, onClose }) {
       {/* Difficulty badge */}
       <div className="absolute top-6 right-6 z-50 flex flex-col gap-2 items-end">
         <span className={`px-4 py-2 rounded-full text-sm font-black backdrop-blur border-2 ${difficulty === 'easy' ? 'bg-green-400/80 text-white border-green-600' :
-            difficulty === 'medium' ? 'bg-yellow-400/80 text-white border-yellow-600' :
-              'bg-red-400/80 text-white border-red-600'
+          difficulty === 'medium' ? 'bg-yellow-400/80 text-white border-yellow-600' :
+            'bg-red-400/80 text-white border-red-600'
           }`}>
           {DIFFICULTY_LABELS[difficulty]}
         </span>
@@ -1598,12 +1598,29 @@ const ActivitiesTab = () => {
     return 'student-' + name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   };
 
-  const handleStudentDone = useCallback(({ stars, score, studentName }) => {
+  const handleStudentDone = useCallback(async ({ stars, score, studentName }) => {
     const act = runningActivity;
     const sName = studentName ?? 'Unknown';
-    const studentId = makeStudentId(sName);
 
-    // 1. Save to StarContext (localStorage) — syncs to Parent portal instantly
+    // ── Step 1: MongoDB se real _id lo ──────────────────────────
+    let realStudentId = null;
+    try {
+      const res = await axios.post(API_ENDPOINTS.GET_STUDENT_ID, { name: sName });
+      if (res.data?.status === 'found') {
+        realStudentId = res.data.student_id;
+        console.log(`✅ Real MongoDB ID found: ${realStudentId}`);
+      } else {
+        console.warn(`⚠️ Student "${sName}" not found in DB — using fallback ID`);
+      }
+    } catch (e) {
+      console.warn('Could not fetch student ID from DB:', e);
+    }
+
+    // Fallback: agar DB mein na mile toh naam se string banao
+    const studentId = realStudentId ??
+      ('student-' + sName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+
+    // ── Step 2: StarContext mein save karo ──────────────────────
     addActivityResult({
       studentId,
       studentName: sName,
@@ -1613,7 +1630,7 @@ const ActivitiesTab = () => {
       score,
     });
 
-    // 2. Also save to backend JSON file
+    // ── Step 3: Backend mein save karo ─────────────────────────
     axios.post('http://127.0.0.1:5000/save-activity-result', {
       student_id: studentId,
       student_name: sName,
@@ -1626,8 +1643,8 @@ const ActivitiesTab = () => {
     setLastResult({ stars, score, studentName: sName, activityName: act?.name });
     setShowBanner(true);
     setTimeout(() => setShowBanner(false), 5000);
-  }, [addActivityResult, runningActivity]); // eslint-disable-line
 
+  }, [addActivityResult, runningActivity]); // eslint-disable-line
   const handleClose = useCallback(() => setRunningActivity(null), []);
 
   return (
