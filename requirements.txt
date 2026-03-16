@@ -1,0 +1,13 @@
+```
+flask
+flask-bcrypt
+flask-cors
+pymongo[srv]
+python-dotenv
+pyjwt
+anthropic
+openai
+requests
+dnspython
+bson
+```

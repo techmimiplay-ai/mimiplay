@@ -659,6 +659,11 @@ import jwt
 import base64
 import numpy as np
 
+from dotenv import load_dotenv
+load_dotenv()
+
+MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
+
 
 try:
     # Prefer the face_detection module inside the face_detection/ folder
@@ -1448,7 +1453,7 @@ def save_activity_result():
         }
 
         # ── 1. MongoDB mein save karo ──────────────────────────────
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(MONGO_URI)["AlexiDB"]
         activity_collection = db["activity_results"]
         activity_collection.insert_one(entry)
 
@@ -1562,7 +1567,7 @@ def get_student_id_by_name():
         if not name:
             return jsonify({"status": "error", "message": "Name required"}), 400
 
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(MONGO_URI)["AlexiDB"]
         students_col = db["students"]
 
         # Case-insensitive search karo naam se
@@ -1597,7 +1602,7 @@ def mark_attendance():
             return jsonify({"message": "error", "reason": "name required"}), 400
 
         today = datetime.now().strftime("%Y-%m-%d")
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(MONGO_URI)["AlexiDB"]
 
         # Already marked check
         existing = db["attendance"].find_one({"name": name, "date": today})
@@ -1737,7 +1742,7 @@ def stop_mimi_session():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-        
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(whatsapp_bp)
@@ -1746,5 +1751,5 @@ app.register_blueprint(teacher_bp)
 
 
 if __name__ == "__main__":
-    # debug=False rakhein threading ke waqt, warna camera do baar khul sakta hai
-    app.run(debug=False, port=5000, host='0.0.0.0')
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, port=port, host='0.0.0.0')
