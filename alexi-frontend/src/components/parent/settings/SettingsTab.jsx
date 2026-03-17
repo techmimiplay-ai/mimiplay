@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 import { Button, Card, Input } from '../../shared';
 import { Save, User, Mail, Phone, Lock, Bell, Palette } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -34,7 +35,7 @@ const SettingsTab = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/parent/profile?parent_id=${parentId}`
+        `${API_BASE_URL}/api/parent/profile?parent_id=${parentId}`
       );
       if (res.data?.status === 'success') {
         const p = res.data.profile;
@@ -66,7 +67,7 @@ const SettingsTab = () => {
     try {
       setSaveStatus('Saving...');
       await axios.put(
-        `http://127.0.0.1:5000/api/parent/profile?parent_id=${parentId}`,
+        `${API_BASE_URL}/api/parent/profile?parent_id=${parentId}`,
         {
           name:       formData.name,
           email:      formData.email,

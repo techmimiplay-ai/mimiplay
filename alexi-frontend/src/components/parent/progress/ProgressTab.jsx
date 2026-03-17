@@ -170,6 +170,7 @@
 // src/components/parent/progress/ProgressTab.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 import { Card } from '../../../components/shared';
 import { CheckCircle, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -222,7 +223,7 @@ const ProgressTab = ({ selectedChild }) => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/parent/child-stars?student_id=${studentId}`
+        `${API_BASE_URL}/api/parent/child-stars?student_id=${studentId}`
       );
       if (res.data?.status === 'success') {
         setStarsData({

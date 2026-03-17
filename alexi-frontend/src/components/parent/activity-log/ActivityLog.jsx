@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 import { Card, Button } from '../../../components/shared';
 import { Calendar, Filter, Download, BookOpen, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -52,7 +53,7 @@ const ActivityLog = ({ selectedChild }) => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/parent/child-stars?student_id=${studentId}`
+        `${API_BASE_URL}/api/parent/child-stars?student_id=${studentId}`
       );
       if (res.data?.status === 'success') {
         setAllResults(res.data.results || []);

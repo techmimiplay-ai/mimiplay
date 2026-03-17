@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card } from '../../../components/shared';
 import { Users, BookOpen, BarChart, TrendingUp, Monitor, Play } from 'lucide-react';
@@ -23,7 +24,7 @@ const TeacherHome = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/teacher/dashboard-stats?teacher_id=${teacherId}`
+        `${API_BASE_URL}/api/teacher/dashboard-stats?teacher_id=${teacherId}`
       );
       if (res.data?.status === 'success') {
         setStats(res.data);

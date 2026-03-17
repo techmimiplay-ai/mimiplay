@@ -469,6 +469,7 @@ import StudentEditModal from './StudentEditModal';
 import { Search, Plus, Edit2, Trash2, Eye, Mail, Phone, MessageSquare, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useStars } from '../../../context/StarContext';
+import { API_BASE_URL } from '../../../config';
 
 const StudentList = () => {
   // ── Star store — only used for Aarav Sharma (student-1) ────────────────────
@@ -486,7 +487,7 @@ const StudentList = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://127.0.0.1:5000/api/admin/all-students-with-stats');
+      const res = await axios.get(`${API_BASE_URL}/api/admin/all-students-with-stats`);
 
       // Backend data ko frontend format mein convert karo
       const formatted = res.data.map((s, index) => ({
@@ -532,7 +533,7 @@ const StudentList = () => {
   const handleAddStudent = async () => {
     try {
       // Backend mein save karo
-      await axios.post('http://127.0.0.1:5000/api/admin/add-student', {
+      await axios.post(`${API_BASE_URL}/api/admin/add-student`, {
         name: formData.name,
         rollNumber: formData.rollNo,
         age: formData.age,

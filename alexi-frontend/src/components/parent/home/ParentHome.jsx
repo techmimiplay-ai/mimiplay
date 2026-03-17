@@ -532,6 +532,7 @@ import axios from 'axios';
 import { Card } from '../../../components/shared';
 import { TrendingUp, Award, BookOpen, Star, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL } from '../../../config';
 
 const ParentHome = ({ selectedChild }) => {
 
@@ -578,7 +579,7 @@ const ParentHome = ({ selectedChild }) => {
   const fetchStarsData = async (studentId) => {
     try {
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/parent/child-stars?student_id=${studentId}`
+        `${API_BASE_URL}/api/parent/child-stars?student_id=${studentId}`
       );
       if (res.data?.status === 'success') {
         setStarsData(res.data);
@@ -599,7 +600,7 @@ const ParentHome = ({ selectedChild }) => {
     try {
       // Student ki real _id se attendance check karo
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/parent/check-attendance?student_id=${studentId}&name=${encodeURIComponent(studentName)}`
+        `${API_BASE_URL}/api/parent/check-attendance?student_id=${studentId}&name=${encodeURIComponent(studentName)}`
       );
       if (res.data?.status === 'success') {
         setPresentToday(res.data.present);

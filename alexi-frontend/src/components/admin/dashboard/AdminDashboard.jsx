@@ -203,6 +203,7 @@ import { Users, UserPlus, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lu
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 
 const AdminDashboard = () => {
 
@@ -229,10 +230,10 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const statsRes = await axios.get("http://localhost:5000/api/admin/dashboard-stats");
+      const statsRes = await axios.get(`${API_BASE_URL}/api/admin/dashboard-stats`);
       setStats(statsRes.data);
 
-      const pendingRes = await axios.get("http://localhost:5000/api/admin/pending-users");
+      const pendingRes = await axios.get(`${API_BASE_URL}/api/admin/pending-users`);
       setPendingApprovals(pendingRes.data);
 
     } catch (error) {

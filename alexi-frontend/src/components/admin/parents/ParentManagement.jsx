@@ -311,6 +311,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Modal, Avatar } from '../../../components/shared';
 import { Search, CheckCircle, XCircle, Eye, Mail, Phone, User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../../../config';
 
 const ParentManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -324,7 +325,7 @@ const ParentManagement = () => {
   const [students, setStudents] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/all-users")
+    fetch(`${API_BASE_URL}/api/admin/all-users`)
       .then(res => res.json())
       .then(data => {
         const parentsOnly = data.filter(user => user.role === "parent"); // ⭐ FIX
@@ -353,7 +354,7 @@ const ParentManagement = () => {
   }, [selectedParent]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/all-students")
+    fetch(`${API_BASE_URL}/api/admin/all-students`)
       .then(res => res.json())
       .then(data => {
         setStudents(data);
@@ -379,7 +380,7 @@ const ParentManagement = () => {
   };
 
   const handleApprove = async (parent) => {
-    await fetch(`http://localhost:5000/api/admin/approve/${parent.id}`, {
+    await fetch(`${API_BASE_URL}/api/admin/approve/${parent.id}`, {
       method: "PUT"
     });
 
@@ -400,7 +401,7 @@ const ParentManagement = () => {
   const handleUpdateParent = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/edit-parent/${editForm.id}`,
+        `${API_BASE_URL}/api/admin/edit-parent/${editForm.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

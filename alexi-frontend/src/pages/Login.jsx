@@ -258,6 +258,7 @@ import { AuthLayout } from '../layouts';
 import { Button, Input } from '../components/shared';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../config';
 
 // Test credentials for all account types
 // const TEST_ACCOUNTS = {
@@ -373,7 +374,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

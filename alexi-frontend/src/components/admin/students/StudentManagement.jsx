@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Modal, Avatar } from '../../../components/shared';
 import { Search, Eye, Mail, Phone, User, CheckCircle, Plus, Pencil } from 'lucide-react';
+import { API_BASE_URL } from '../../../config';
 
 const StudentManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -22,7 +23,7 @@ const StudentManagement = () => {
     });
 
     const fetchStudents = async () => {
-        const res = await fetch("http://localhost:5000/api/admin/all-students");
+        const res = await fetch(`${API_BASE_URL}/api/admin/all-students`);
         const data = await res.json();
 
         const formatted = data.map(s => ({
@@ -43,7 +44,7 @@ const StudentManagement = () => {
     };
 
     const fetchParents = async () => {
-        const res = await fetch("http://localhost:5000/api/admin/all-users");
+        const res = await fetch(`${API_BASE_URL}/api/admin/all-users`);
         const data = await res.json();
 
         const onlyParents = data.filter(u => u.role === "parent");
@@ -60,7 +61,7 @@ const StudentManagement = () => {
     const handleAddStudent = async () => {
         const selectedParentObj = parents.find(p => p._id === formData.parentName);
         try {
-            const response = await fetch("http://localhost:5000/api/admin/add-student", {
+            const response = await fetch(`${API_BASE_URL}/api/admin/add-student`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -90,7 +91,7 @@ const StudentManagement = () => {
     const handleUpdateStudent = async () => {
         const selectedParentObj = parents.find(p => p._id === editData.parentId || p.name === editData.parentName);
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/edit-student/${editData.id}`, {
+            const res = await fetch(`${API_BASE_URL}/api/admin/edit-student/${editData.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 import { Button, Card, Input, Avatar } from '../../../components/shared';
 import { User, Mail, Phone, Lock, Bell, Monitor, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -42,7 +43,7 @@ const SettingsTab = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/teacher/profile?teacher_id=${teacherId}`
+        `${API_BASE_URL}/api/teacher/profile?teacher_id=${teacherId}`
       );
       if (res.data?.status === 'success') {
         setProfileData(res.data.profile);
@@ -64,7 +65,7 @@ const SettingsTab = () => {
   const handleSaveProfile = async () => {
     try {
       await axios.put(
-        `http://127.0.0.1:5000/api/teacher/profile?teacher_id=${teacherId}`,
+        `${API_BASE_URL}/api/teacher/profile?teacher_id=${teacherId}`,
         profileData
       );
       showMsg('✅ Profile updated successfully!');
@@ -86,7 +87,7 @@ const SettingsTab = () => {
     }
     try {
       const res = await axios.put(
-        `http://127.0.0.1:5000/api/teacher/change-password?teacher_id=${teacherId}`,
+        `${API_BASE_URL}/api/teacher/change-password?teacher_id=${teacherId}`,
         { currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword }
       );
       if (res.data?.status === 'success') {

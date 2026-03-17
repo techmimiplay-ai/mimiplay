@@ -4,6 +4,7 @@ import { AuthLayout } from '../layouts';
 import { Button, Input } from '../components/shared';
 import { User, Mail, Lock, Phone, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../config';
 
 const Register = () => {
   const navigate = useNavigate(); // ← ADD THIS
@@ -92,7 +93,7 @@ const Register = () => {
     //   setLoading(false);
     // }, 1500);
     try {
-      const res = await fetch("http://localhost:5000/api/register", {
+      const res = await fetch(`${API_BASE_URL}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

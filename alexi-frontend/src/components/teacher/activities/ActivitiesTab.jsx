@@ -293,7 +293,7 @@ import axios from 'axios';
 import { Button, Card, Modal } from '../../../components/shared';
 import { Play, Settings, Plus, Clock, Users, Star, Mic, MicOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { API_ENDPOINTS } from '../../../config';
+import { API_BASE_URL, API_ENDPOINTS } from '../../../config';
 import { useStars } from '../../../context/StarContext';
 
 import bgImage from '../../../assets/images/mimi/activity_bg.jpg';
@@ -1681,7 +1681,7 @@ const ActivitiesTab = ({ isParentMode = false }) => {
     });
 
     // ── Step 3: Backend mein save karo ─────────────────────────
-    axios.post('http://127.0.0.1:5000/save-activity-result', {
+    axios.post(`${API_BASE_URL}/save-activity-result`, {
       student_id: studentId,
       student_name: sName,
       activity_id: act?.id ?? 0,

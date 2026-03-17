@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../../config';
 import { Button, Card, Modal } from '../../../components/shared';
 import { Calendar, Download, CheckCircle, XCircle, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -20,7 +21,7 @@ const AttendanceTab = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://127.0.0.1:5000/api/teacher/attendance?date=${date}`
+        `${API_BASE_URL}/api/teacher/attendance?date=${date}`
       );
       if (res.data?.status === 'success') {
         setAttendanceData(res.data.data || []);
@@ -68,7 +69,7 @@ const AttendanceTab = () => {
     // DB mein save karo
     try {
       setSaving(student.name);
-      await axios.post('http://127.0.0.1:5000/api/teacher/attendance/update', {
+      await axios.post(`${API_BASE_URL}/api/teacher/attendance/update`, {
         name:       student.name,
         status:     nextStatus,
         date:       selectedDate,
@@ -95,7 +96,7 @@ const AttendanceTab = () => {
       await Promise.all(
         attendanceData
           .filter(s => s.status !== 'present')
-          .map(s => axios.post('http://127.0.0.1:5000/api/teacher/attendance/update', {
+          .map(s => axios.post(`${API_BASE_URL}/api/teacher/attendance/update`, {
             name:       s.name,
             status:     'present',
             date:       selectedDate,

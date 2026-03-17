@@ -128,6 +128,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Home, TrendingUp, Award, FileText, LogOut, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../../config';
 
 // Parent Pages
 import ParentHome from '../../components/parent/home/ParentHome';
@@ -155,7 +156,7 @@ const ParentPortal = () => {
       }
 
       try {
-        const res = await fetch(`http://localhost:5000/api/parent/my-children/${parentId}`);
+        const res = await fetch(`${API_BASE_URL}/api/parent/my-children/${parentId}`);
         const data = await res.json();
 
         if (res.ok) {

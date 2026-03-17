@@ -431,6 +431,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Modal, Avatar } from '../../../components/shared';
 import { Search, Plus, CheckCircle, XCircle, Eye, Mail, Phone, Building2, User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../../../config';
 
 const TeacherManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -443,7 +444,7 @@ const TeacherManagement = () => {
   const [editData, setEditData] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/all-users")
+    fetch(`${API_BASE_URL}/api/admin/all-users`)
       .then(res => res.json())
       .then(data => {
         const formatted = data
@@ -484,7 +485,7 @@ const TeacherManagement = () => {
   });
 
   const handleApprove = async (teacher) => {
-    await fetch(`http://localhost:5000/api/admin/approve/${teacher.id}`, {
+    await fetch(`${API_BASE_URL}/api/admin/approve/${teacher.id}`, {
       method: "PUT"
     });
 
@@ -512,7 +513,7 @@ const TeacherManagement = () => {
 
   const handleAddTeacher = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/add-teacher", {
+      const res = await fetch(`${API_BASE_URL}/api/admin/add-teacher`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -541,7 +542,7 @@ const TeacherManagement = () => {
   const handleUpdateTeacher = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/edit-teacher/${editData.id}`,
+        `${API_BASE_URL}/api/admin/edit-teacher/${editData.id}`,
         {
           method: "PUT",
           headers: {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import bgImage from '../../assets/images/mimi/bg.jpg'; 
 
@@ -21,7 +22,7 @@ useEffect(() => {
   if (status !== 'idle') {
     interval = setInterval(async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:5000/get-status');
+        const res = await axios.get(API_ENDPOINTS.GET_STATUS);
 
         // Agar backend ne kisi ko pehchan liya hai
         if (res.data.person) {
@@ -59,7 +60,7 @@ useEffect(() => {
 
   const interval = setInterval(async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:5000/get-status');
+      const res = await axios.get(API_ENDPOINTS.GET_STATUS);
 
       if (res.data.person) {
         setPersonName(res.data.person);
@@ -88,7 +89,7 @@ useEffect(() => {
 
     try {
       // Flask Backend Call to start camera thread
-      await axios.get('http://127.0.0.1:5000/start-classroom');
+      await axios.get(API_ENDPOINTS.START_CLASSROOM);
     } catch (err) {
       setLog('Error: Flask server not responding');
       setStatus('idle');
