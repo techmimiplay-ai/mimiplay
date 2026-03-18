@@ -1662,17 +1662,18 @@ def process_frame():
         np_arr = np.frombuffer(img_bytes, np.uint8)
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # locations = face_recognition.face_locations(rgb)
-        # encodings = face_recognition.face_encodings(rgb, locations)
-        locations = _face_recognition_lib.face_locations(rgb)      # ← NAYA
+        locations = _face_recognition_lib.face_locations(rgb)
         encodings = _face_recognition_lib.face_encodings(rgb, locations)
         for enc in encodings:
-            distances = face_recognition.face_distance(system.known_encodings, enc)
+            distances = _face_recognition_lib.face_distance(system.known_encodings, enc)
             if len(distances) and min(distances) < 0.45:
                 name = system.known_names[int(np.argmin(distances))]
                 return jsonify({'person': name, 'status': 'recognised'})
         return jsonify({'person': None, 'status': 'no_face'})
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"PROCESS-FRAME ERROR: {e}")
         return jsonify({'error': str(e)}), 500
 
 
