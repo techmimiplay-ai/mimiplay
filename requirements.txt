@@ -1,4 +1,4 @@
-```
+
 flask
 flask-bcrypt
 flask-cors
@@ -10,4 +10,3 @@ openai
 requests
 dnspython
 bson
-```
