@@ -1649,11 +1649,10 @@ def speak_text():
     os.remove(tmp_path)
     return jsonify({'audio': audio_data})
 
+    
 @app.route('/process-frame', methods=['POST'])
 def process_frame():
-    import base64
-    import numpy as np
-    import cv2
+    import base64, numpy as np, cv2
     try:
         data = request.get_json()
         img_data = data.get('frame', '')
@@ -1671,11 +1670,7 @@ def process_frame():
                 return jsonify({'person': name, 'status': 'recognised'})
         return jsonify({'person': None, 'status': 'no_face'})
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"PROCESS-FRAME ERROR: {e}")
         return jsonify({'error': str(e)}), 500
-
 
       
 
