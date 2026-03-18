@@ -653,16 +653,10 @@ from routes.auth_routes import auth_bp
 from routes.admin_routes import admin_bp
 from routes.whatsapp_route import whatsapp_bp
 from routes.parent_routes import parent_bp
-from routes.teacher_routes import teacher_bp
 from extensions import users, attendance_collection, bcrypt
 import jwt
 import base64
 import numpy as np
-
-from dotenv import load_dotenv
-load_dotenv()
-
-MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
 
 
 try:
@@ -1453,7 +1447,7 @@ def save_activity_result():
         }
 
         # ── 1. MongoDB mein save karo ──────────────────────────────
-        db = MongoClient(MONGO_URI)["AlexiDB"]
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
         activity_collection = db["activity_results"]
         activity_collection.insert_one(entry)
 
@@ -1567,7 +1561,7 @@ def get_student_id_by_name():
         if not name:
             return jsonify({"status": "error", "message": "Name required"}), 400
 
-        db = MongoClient(MONGO_URI)["AlexiDB"]
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
         students_col = db["students"]
 
         # Case-insensitive search karo naam se
@@ -1602,7 +1596,7 @@ def mark_attendance():
             return jsonify({"message": "error", "reason": "name required"}), 400
 
         today = datetime.now().strftime("%Y-%m-%d")
-        db = MongoClient(MONGO_URI)["AlexiDB"]
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
 
         # Already marked check
         existing = db["attendance"].find_one({"name": name, "date": today})
@@ -1631,125 +1625,59 @@ def mark_attendance():
         print(f"[mark-attendance] ERROR: {e}")
         return jsonify({"message": "error", "reason": str(e)}), 500        
 
-
-# ── Mimi Chat save karo ───────────────────────────────────────
-@app.route('/api/mimi/save-chat', methods=['POST'])
-def save_mimi_chat():
-    try:
-        data         = request.get_json() or {}
-        student_name = data.get("student_name", "Unknown")
-        student_id   = data.get("student_id",   "")
-        session_id   = data.get("session_id",   "")
-        messages     = data.get("messages",     [])  # ← poori chat array
-
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
-
-        # Student ka real _id lo
-        try:
-            oid = ObjectId(student_id) if student_id else None
-        except Exception:
-            oid = None
-
-        if not oid and student_name != "Unknown":
-            student = db["students"].find_one(
-                {"name": {"$regex": f"^{student_name}$", "$options": "i"}}
-            )
-            if student:
-                oid          = student["_id"]
-                student_name = student.get("name", student_name)
-
-        # Agar session already exists — update karo
-        existing = db["mimi_chats"].find_one({"session_id": session_id})
-        if existing:
-            db["mimi_chats"].update_one(
-                {"session_id": session_id},
-                {"$set": {
-                    "messages":   messages,
-                    "updated_at": datetime.now().isoformat(),
-                    "total_msgs": len(messages),
-                }}
-            )
-        else:
-            # Naya session document banao
-            db["mimi_chats"].insert_one({
-                "student_id":   oid,
-                "student_name": student_name,
-                "session_id":   session_id,
-                "messages":     messages,  # ← array of {question, answer, image_url, time}
-                "date":         datetime.now().strftime("%Y-%m-%d"),
-                "started_at":   datetime.now().isoformat(),
-                "updated_at":   datetime.now().isoformat(),
-                "total_msgs":   len(messages),
-            })
-
-        return jsonify({"status": "success"})
-
-    except Exception as e:
-        print(f"[save-mimi-chat] ERROR: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# ── Mimi Chat history fetch karo ─────────────────────────────
-@app.route('/api/mimi/chat-history', methods=['GET'])
-def get_mimi_chat_history():
-    try:
-        student_name = request.args.get('student_name', '')
-        session_id   = request.args.get('session_id',   '')
-        limit        = int(request.args.get('limit', 50))
-
-        db    = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
-        query = {}
-        if student_name:
-            query["student_name"] = {"$regex": f"^{student_name}$", "$options": "i"}
-        if session_id:
-            query["session_id"] = session_id
-
-        chats = list(db["mimi_chats"].find(query)
-                     .sort("timestamp", -1).limit(limit))
-
-        formatted = []
-        for c in chats:
-            formatted.append({
-                "id":           str(c["_id"]),
-                "student_name": c.get("student_name", ""),
-                "question":     c.get("question",     ""),
-                "answer":       c.get("answer",       ""),
-                "image_url":    c.get("image_url",    ""),
-                "session_id":   c.get("session_id",   ""),
-                "date":         c.get("date",         ""),
-                "timestamp":    c.get("timestamp",    ""),
-            })
-
-        return jsonify({"status": "success", "chats": formatted})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-# ── Mimi session stop karo ────────────────────────────────────
-@app.route('/api/mimi/stop-session', methods=['POST'])
-def stop_mimi_session():
-    try:
-        if mimi_system:
-            mimi_system._stop = True
-            # Queue clear karo taaki TTS bhi band ho
-            if hasattr(mimi_system, 'speech') and mimi_system.speech:
-                mimi_system.speech.clear_queue()
-            # Current action reset karo
-            mimi_system.current_action = 'idle'
-            mimi_system.current_text   = None
-            print("[Mimi] ✅ Session stopped by API")
-        return jsonify({"status": "success", "message": "Mimi session stopped"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(whatsapp_bp)
 app.register_blueprint(parent_bp)
-app.register_blueprint(teacher_bp)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, port=port, host='0.0.0.0')
+    # debug=False rakhein threading ke waqt, warna camera do baar khul sakta hai
+    app.run(debug=False, port=5000, host='0.0.0.0')
+
+@app.route('/speak', methods=['POST'])
+def speak_text():
+    import asyncio
+    import edge_tts
+    import tempfile
+    import base64
+    data = request.get_json()
+    text = data.get('text', '')
+    async def generate(text, path):
+        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+        await communicate.save(path)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+        tmp_path = f.name
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(generate(text, tmp_path))
+    loop.close()
+    with open(tmp_path, 'rb') as f:
+        audio_data = base64.b64encode(f.read()).decode()
+    os.remove(tmp_path)
+    return jsonify({'audio': audio_data})
+
+@app.route('/process-frame', methods=['POST'])
+def process_frame():
+    import base64
+    import numpy as np
+    import cv2
+    try:
+        data = request.get_json()
+        img_data = data.get('frame', '')
+        img_data = img_data.split(',')[1] if ',' in img_data else img_data
+        img_bytes = base64.b64decode(img_data)
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        locations = face_recognition.face_locations(rgb)
+        encodings = face_recognition.face_encodings(rgb, locations)
+        for enc in encodings:
+            distances = face_recognition.face_distance(system.known_encodings, enc)
+            if len(distances) and min(distances) < 0.45:
+                name = system.known_names[int(np.argmin(distances))]
+                return jsonify({'person': name, 'status': 'recognised'})
+        return jsonify({'person': None, 'status': 'no_face'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
