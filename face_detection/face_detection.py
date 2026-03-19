@@ -672,15 +672,27 @@ class SpeechManager:
 
     def _worker(self):
         """The ONE thread that plays audio using edge-tts + pygame."""
-        import pygame
-        import tempfile
-        import asyncio
-        import edge_tts
-        pygame.mixer.init()
+        try:
+            import pygame
+            import tempfile
+            import asyncio
+            import edge_tts
+            pygame.mixer.init()
 
-        async def speak(text, path):
-            communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
-            await communicate.save(path)
+            async def speak(text, path):
+                communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+                await communicate.save(path)
+        except Exception as e:
+            logger.warning(f"Audio TTS playback dependencies missing. Audio is disabled: {e}")
+            while True:
+                self._trigger.wait()
+                self._trigger.clear()
+                while True:
+                    with self._lock:
+                        if not self._queue: break
+                        text, done_event = self._queue.pop(0)
+                    if done_event: done_event.set()
+            return
 
         while True:
             self._trigger.wait()
@@ -756,6 +768,8 @@ class SpeechManager:
 class SpeechRecognizer:
     def __init__(self):
         try:
+            if sr is None:
+                raise ImportError("speech_recognition module is disabled")
             self.recognizer = sr.Recognizer()
             self.microphone = sr.Microphone()
             with self.microphone as source:
@@ -871,6 +885,10 @@ class FaceRecognitionSystem:
     # ── Face loading ────────────────────────────────────────────────────────────
 
     def _load_faces(self):
+        if face_recognition is None:
+            logger.warning("face_recognition module is not available. Skipping face loading.")
+            return
+
         if not os.path.exists(self.known_faces_dir):
             os.makedirs(self.known_faces_dir)
             logger.warning(f"Created {self.known_faces_dir} — add face images!")
