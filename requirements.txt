@@ -9,4 +9,6 @@ anthropic
 openai
 requests
 dnspython
-bson
+twilio
+edge_tts
+gunicorn

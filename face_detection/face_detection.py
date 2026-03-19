@@ -466,15 +466,7 @@ Flow:
   6. speak_and_wait(mood reply)                        ← blocks until spoken
 """
 
-import cv2
-try:
-    import face_recognition
-except Exception:
-    face_recognition = None
-    print("face_recognition skipped")
 import os
-import numpy as np
-import pyttsx3
 import logging
 from datetime import datetime
 import csv
@@ -482,10 +474,19 @@ import sys
 import time
 import threading
 import traceback
-import speech_recognition as sr
-from pymongo import MongoClient
-from datetime import datetime
 import requests
+from pymongo import MongoClient
+
+try:
+    import cv2
+    import numpy as np
+    import pyttsx3
+    import speech_recognition as sr
+    import face_recognition
+except Exception as e:
+    print(f"Hardware-dependent imports skipped on server: {e}")
+    cv2 = np = pyttsx3 = sr = face_recognition = None
+
 
 # ============================================================================
 # CONFIGURATION
@@ -604,7 +605,8 @@ logger.addHandler(console_handler)
 class AttendanceManager:
     def __init__(self, db_name="AlexiDB", collection_name="attendance"):
         # Yahan hum MongoDB se connect kar rahe hain
-        self.client = MongoClient("mongodb://localhost:27017/")
+        MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
+        self.client = MongoClient(MONGO_URI)
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]
         print("MongoDB AttendanceManager ready")

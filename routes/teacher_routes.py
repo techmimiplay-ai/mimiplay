@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from pymongo import MongoClient
+import os
 from bson import ObjectId
 from datetime import datetime, timedelta
 
@@ -13,7 +14,7 @@ def get_teacher_dashboard_stats():
     try:
         teacher_id = request.args.get('teacher_id')
         today      = datetime.now().strftime("%Y-%m-%d")
-        db         = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db         = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # Teacher naam
         teacher_name = "Teacher"
@@ -73,7 +74,7 @@ def get_teacher_dashboard_stats():
 def get_attendance_by_date():
     try:
         date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
-        db   = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db   = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         attendance_records = list(db["attendance"].find({"date": date}))
         marked_names = {r.get("name", "").lower(): r for r in attendance_records}
@@ -116,7 +117,7 @@ def update_attendance_manual():
         if not name:
             return jsonify({"status": "error", "message": "name required"}), 400
 
-        db       = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db       = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         existing = db["attendance"].find_one({"name": name, "date": date})
 
         if status == "absent":
@@ -159,7 +160,7 @@ def update_attendance_manual():
 @teacher_bp.route('/api/admin/all-students-with-stats', methods=['GET'])
 def get_all_students_with_stats():
     try:
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         all_students = list(db["students"].find())
         result = []
 
@@ -224,7 +225,7 @@ def get_teacher_profile():
         if not teacher_id:
             return jsonify({"status": "error", "message": "teacher_id required"}), 400
 
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         teacher = db["users"].find_one({"_id": ObjectId(teacher_id)})
         if not teacher:
             return jsonify({"status": "error", "message": "Teacher not found"}), 404
@@ -257,7 +258,7 @@ def update_teacher_profile():
             return jsonify({"status": "error", "message": "teacher_id required"}), 400
 
         data = request.get_json() or {}
-        db   = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db   = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         update_fields = {}
         for field, db_key in [
@@ -303,7 +304,7 @@ def change_teacher_password():
         from flask_bcrypt import Bcrypt
         from extensions import bcrypt
 
-        db      = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db      = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         teacher = db["users"].find_one({"_id": ObjectId(teacher_id)})
         if not teacher:
             return jsonify({"status": "error", "message": "Teacher not found"}), 404

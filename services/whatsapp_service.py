@@ -9,8 +9,11 @@ TWILIO_NUMBER = "whatsapp:+14155238886"
 
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
+import os
+
 # Mongo connection (same as app.py)
-mongo = MongoClient("mongodb://localhost:27017/")
+MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
+mongo = MongoClient(MONGO_URI)
 db = mongo["AlexiDB"]
 users = db["users"]
 attendance_collection = db["attendance"]

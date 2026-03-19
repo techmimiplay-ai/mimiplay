@@ -58,6 +58,7 @@
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from datetime import datetime
+import os
 from pymongo import MongoClient
 from extensions import students, users
 
@@ -90,7 +91,7 @@ def get_child_data():
         if not parent_id:
             return jsonify({"status": "error", "message": "parent_id required"}), 400
 
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # Parent dhundo
         parent = db["users"].find_one({"_id": ObjectId(parent_id)})
@@ -154,7 +155,7 @@ def get_child_stars():
         if not student_id:
             return jsonify({"status": "error", "message": "student_id required"}), 400
 
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         today = datetime.now().strftime("%Y-%m-%d")
 
         # Activity results fetch karo
@@ -198,7 +199,7 @@ def check_child_attendance():
         name       = request.args.get('name', '')
         today      = datetime.now().strftime("%Y-%m-%d")
 
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # ObjectId banana try karo
         try:
@@ -236,7 +237,7 @@ def get_parent_profile():
         if not parent_id:
             return jsonify({"status": "error", "message": "parent_id required"}), 400
 
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         parent = db["users"].find_one({"_id": ObjectId(parent_id)})
         if not parent:
             return jsonify({"status": "error", "message": "Parent not found"}), 404
@@ -263,7 +264,7 @@ def update_parent_profile():
             return jsonify({"status": "error", "message": "parent_id required"}), 400
 
         data = request.get_json() or {}
-        db   = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db   = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         update_fields = {}
         if data.get("name"):       update_fields["name"]       = data["name"]
