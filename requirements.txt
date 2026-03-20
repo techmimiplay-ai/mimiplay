@@ -12,3 +12,6 @@ dnspython
 twilio
 edge_tts
 gunicorn
+numpy
+opencv-python 
+face_recognition

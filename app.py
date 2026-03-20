@@ -1051,43 +1051,43 @@ def start_face_detect():
             if not _cv_available:
                 return
             
-            # 1. Load faces safely
-            known_dir = os.path.join(os.path.dirname(__file__), "face_detection", "known_faces")
-            if not os.path.exists(known_dir):
-                known_dir = os.path.join(os.path.dirname(__file__), "known_faces")
-
-            known_encodings, known_names = [], []
-            if os.path.exists(known_dir):
-                for fname in os.listdir(known_dir):
-                    if not fname.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        continue
-                    try:
-                        img = _face_recognition_lib.load_image_file(os.path.join(known_dir, fname))
-                        encs = _face_recognition_lib.face_encodings(img)
-                        if encs:
-                            known_encodings.append(encs[0])
-                            known_names.append(os.path.splitext(fname)[0].replace('_', ' ').title())
-                    except Exception as e:
-                        print(f"Error loading {fname}: {e}")
+            # 1. Use pre-loaded faces from system instead of reloading from disk
+            known_encodings = system.known_encodings
+            known_names     = system.known_names
+            
+            if not known_encodings:
+                print("[FaceDetect] No known faces loaded in system. Please register faces first.")
+                # We still try to open camera to set action to 'detecting'
+            else:
+                print(f"[FaceDetect] Using {len(known_encodings)} pre-loaded faces.")
 
             # 2. Camera setup with error handling
             cap = cv2.VideoCapture(0)
             if not cap.isOpened():
+                print("[FaceDetect] Camera 0 failed, trying camera 1...")
                 cap = cv2.VideoCapture(1) # Fallback camera
             
+            if not cap.isOpened():
+                print("[FaceDetect] CRITICAL: No camera found!")
+                system._activity_detecting = False
+                system.current_action = 'idle'
+                return
+
             system.current_person  = None
             system.current_action  = 'detecting'
             system.current_warning = None
 
             try:
+                print("[FaceDetect] Starting detection loop...")
                 # YE LOOP CHALTA REHNA CHAHIYE
                 while getattr(system, '_activity_detecting', False):
                     ret, frame = cap.read()
                     if not ret:
+                        print("[FaceDetect] Failed to read frame")
                         time.sleep(0.1)
                         continue
                     
-                    # Optimization
+                    # Optimization: Resize for faster processing
                     small = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
                     rgb   = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
                     locs  = _face_recognition_lib.face_locations(rgb)
@@ -1101,26 +1101,34 @@ def start_face_detect():
                             break
 
                     matched = None
-                    for enc in encs:
-                        if not known_encodings: break
-                        dists = _face_recognition_lib.face_distance(known_encodings, enc)
-                        best  = int(np.argmin(dists))
-                        if dists[best] < 0.5: # Threshold improved
-                            matched = known_names[best]
-                            break
+                    if known_encodings:
+                        for enc in encs:
+                            dists = _face_recognition_lib.face_distance(known_encodings, enc)
+                            best  = int(np.argmin(dists))
+                            distance = dists[best]
+                            
+                            # Threshold improved: 0.55 is more robust than 0.5
+                            if distance < 0.55: 
+                                matched = known_names[best]
+                                print(f"[FaceDetect] Recognized: {matched} (distance: {distance:.3f})")
+                                break
+                            else:
+                                print(f"[FaceDetect] Unknown face (best distance: {distance:.3f})")
                     
                     system.current_person = matched
                     system.current_action = 'recognized' if matched else 'detecting'
                     time.sleep(0.05)
             
             except Exception as e:
-                print(f"Inside Thread Error: {e}")
+                print(f"[FaceDetect] Inside Thread Error: {e}")
+                traceback.print_exc()
             
             finally:
-                # CAMERA BAND HONE PAR BHI FLAG KO SILENTLY HANDLE KAREIN
+                print("[FaceDetect] Stopping and cleaning up...")
                 cap.release()
                 system.current_action = 'idle'
-                # system._activity_detecting = False <-- Ye line mat likhna yahan
+                system.current_person = None
+                system._activity_detecting = False # Ensure flag is reset so we can restart cleanly
 
         # FLAG SET KARKE THREAD START KAREIN
         system._activity_detecting = True
@@ -1650,24 +1658,68 @@ def speak_text():
     
 @app.route('/process-frame', methods=['POST'])
 def process_frame():
-    import base64, numpy as np, cv2
     try:
+        import base64, numpy as np
+        # Import globally if possible, or skip if missing
+        import cv2
+        _cv_ok = True
+    except ImportError:
+        _cv_ok = False
+        
+    try:
+        import face_recognition as fr
+        _fr_ok = True
+    except ImportError:
+        _fr_ok = False
+
+    try:
+        if not _cv_ok or not _fr_ok:
+            return jsonify({
+                "status": "error", 
+                "message": "Backend missing face_recognition or opencv. Please install them in your venv."
+            }), 501
+
         data = request.get_json()
-        img_data = data.get('frame', '')
-        img_data = img_data.split(',')[1] if ',' in img_data else img_data
+        img_data = data.get('image', '')
+        if not img_data:
+            return jsonify({"status": "no_image", "person": None})
+            
+        if ',' in img_data:
+            img_data = img_data.split(',')[1]
+            
         img_bytes = base64.b64decode(img_data)
         np_arr = np.frombuffer(img_bytes, np.uint8)
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return jsonify({"status": "error", "message": "Invalid image data"})
+
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        locations = _face_recognition_lib.face_locations(rgb)
-        encodings = _face_recognition_lib.face_encodings(rgb, locations)
+        
+        # Use existing system encodings if available to avoid reloading
+        known_encs = getattr(system, 'known_encodings', [])
+        known_names = getattr(system, 'known_names', [])
+        
+        if not known_encs:
+            return jsonify({"status": "error", "message": "No known faces loaded in system"})
+
+        locations = fr.face_locations(rgb)
+        encodings = fr.face_encodings(rgb, locations)
+        
         for enc in encodings:
-            distances = _face_recognition_lib.face_distance(system.known_encodings, enc)
-            if len(distances) and min(distances) < 0.45:
-                name = system.known_names[int(np.argmin(distances))]
+            distances = fr.face_distance(known_encs, enc)
+            best_idx = int(np.argmin(distances))
+            distance = distances[best_idx]
+            
+            if distance < 0.55:
+                name = known_names[best_idx].replace('_', ' ').title()
+                print(f"[ProcessFrame] Recognized: {name} ({distance:.3f})")
                 return jsonify({'person': name, 'status': 'recognised'})
+                
         return jsonify({'person': None, 'status': 'no_face'})
     except Exception as e:
+        print(f"[ProcessFrame] Error: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
       

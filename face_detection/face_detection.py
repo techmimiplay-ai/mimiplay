@@ -479,13 +479,33 @@ from pymongo import MongoClient
 
 try:
     import cv2
+except ImportError:
+    cv2 = None
+    print("cv2 skipped")
+
+try:
     import numpy as np
+except ImportError:
+    np = None
+    print("numpy skipped")
+
+try:
     import pyttsx3
+except ImportError:
+    pyttsx3 = None
+    print("pyttsx3 skipped")
+
+try:
     import speech_recognition as sr
+except ImportError:
+    sr = None
+    print("speech_recognition skipped")
+
+try:
     import face_recognition
-except Exception as e:
-    print(f"Hardware-dependent imports skipped on server: {e}")
-    cv2 = np = pyttsx3 = sr = face_recognition = None
+except ImportError:
+    face_recognition = None
+    print("face_recognition skipped")
 
 
 # ============================================================================

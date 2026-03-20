@@ -13565,3 +13565,43 @@ Jungle mein hai sabse nyara!
 2026-03-16 13:31:29,495 - INFO - SpeechManager ready
 2026-03-16 13:31:29,610 - INFO - Calibrating microphone…
 2026-03-16 13:31:30,655 - INFO - SpeechRecognizer ready
+2026-03-20 14:01:51,884 - INFO - SpeechManager ready
+2026-03-20 14:01:51,885 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:01:51,885 - INFO - ============================================================
+2026-03-20 14:01:51,885 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-20 14:01:51,885 - INFO - ============================================================
+2026-03-20 14:01:51,885 - WARNING - face_recognition module is not available. Skipping face loading.
+2026-03-20 14:01:51,886 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:01:51,886 - INFO - SpeechManager ready
+2026-03-20 14:01:51,886 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:01:51,907 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:40:05,266 - INFO - SpeechManager ready
+2026-03-20 14:40:05,266 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:40:05,267 - INFO - ============================================================
+2026-03-20 14:40:05,267 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:40:05,267 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-20 14:40:05,267 - INFO - ============================================================
+2026-03-20 14:40:05,268 - WARNING - face_recognition module is not available. Skipping face loading.
+2026-03-20 14:40:05,268 - INFO - SpeechManager ready
+2026-03-20 14:40:05,269 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:40:05,281 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:46:29,273 - INFO - SpeechManager ready
+2026-03-20 14:46:29,273 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:46:29,273 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:46:29,273 - INFO - ============================================================
+2026-03-20 14:46:29,274 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-20 14:46:29,274 - INFO - ============================================================
+2026-03-20 14:46:29,274 - WARNING - face_recognition module is not available. Skipping face loading.
+2026-03-20 14:46:29,274 - INFO - SpeechManager ready
+2026-03-20 14:46:29,275 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:46:29,285 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:48:44,319 - INFO - SpeechManager ready
+2026-03-20 14:48:44,320 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:48:44,321 - INFO - ============================================================
+2026-03-20 14:48:44,321 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
+2026-03-20 14:48:44,321 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-20 14:48:44,323 - INFO - ============================================================
+2026-03-20 14:48:44,324 - WARNING - face_recognition module is not available. Skipping face loading.
+2026-03-20 14:48:44,325 - INFO - SpeechManager ready
+2026-03-20 14:48:44,325 - ERROR - SpeechRecognizer init failed: speech_recognition module is disabled
+2026-03-20 14:48:44,357 - WARNING - Audio TTS playback dependencies missing. Audio is disabled: No module named 'pygame'
