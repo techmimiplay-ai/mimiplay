@@ -1,28 +1,20 @@
-
 from flask import Flask, jsonify, request
+from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 import threading
 import json
 import re
 import os
 import csv
-import speech_recognition as sr
-from pydub import AudioSegment
-import io
+from pymongo import MongoClient  # MongoDB ke liye import
 from datetime import datetime
 from bson import ObjectId
 from bson.json_util import dumps
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 from routes.auth_routes import auth_bp
 from routes.admin_routes import admin_bp
 from routes.whatsapp_route import whatsapp_bp
 from routes.parent_routes import parent_bp
-from routes.teacher_routes import teacher_bp
-from extensions import db, users, attendance_collection, students, activity_results, bcrypt
+from extensions import users, attendance_collection, bcrypt
 import jwt
 import base64
 
@@ -67,19 +59,7 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "YOUR_ANTHROPIC_KEY_HERE
 RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
 
 app = Flask(__name__)
-CORS(app)
-
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-from mongo_http import maybe_mongo_503
-
-bcrypt.init_app(app)
-
-def _handle_mongo_connection_error(e):
-    return maybe_mongo_503(e)
-
-
-for _mongo_exc in (ServerSelectionTimeoutError, ConnectionFailure):
-    app.register_error_handler(_mongo_exc, _handle_mongo_connection_error)
+CORS(app) 
 
 # System initialize karein
 system = FaceRecognitionSystem()
@@ -312,9 +292,6 @@ def get_attendance_logs():
             "data": logs
         })
     except Exception as e:
-        r = maybe_mongo_503(e)
-        if r is not None:
-            return r
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -598,72 +575,6 @@ def mimi_get():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/mimi-chat', methods=['POST'])
-def mimi_chat():
-    try:
-        data = request.get_json() or {}
-        text = data.get("text", "")
-        if not text:
-            return jsonify({"status": "error", "message": "No text provided"}), 400
-            
-        result = mimi_system.process_text(text)
-        return jsonify({"status": "success", "data": result})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route('/mimi-wake', methods=['POST'])
-def mimi_wake():
-    try:
-        if 'audio' not in request.files:
-            return jsonify({"status": "error", "message": "No audio"}), 400
-        audio_file = request.files['audio']
-        audio = AudioSegment.from_file(io.BytesIO(audio_file.read()))
-        wav_buffer = io.BytesIO()
-        audio.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)
-        
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_buffer) as source:
-            audio_data = recognizer.record(source)
-            text = recognizer.recognize_google(audio_data, language="en-IN").lower()
-            
-        logger.info(f"Wake check transcribed: {text}")
-        if any(term in text for term in ['alexi', 'alexa', 'alex', 'hey alexi', 'hi alexi']):
-            return jsonify({"status": "success", "wake": True, "text": text})
-        return jsonify({"status": "success", "wake": False, "text": text})
-    except sr.UnknownValueError:
-        return jsonify({"status": "success", "wake": False, "message": "silent"})
-    except Exception as e:
-        logger.error(f"Wake error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route('/mimi-chat-audio', methods=['POST'])
-def mimi_chat_audio():
-    try:
-        if 'audio' not in request.files:
-            return jsonify({"status": "error", "message": "No audio"}), 400
-        audio_file = request.files['audio']
-        audio = AudioSegment.from_file(io.BytesIO(audio_file.read()))
-        wav_buffer = io.BytesIO()
-        audio.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)
-        
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_buffer) as source:
-            audio_data = recognizer.record(source)
-            text = recognizer.recognize_google(audio_data, language="en-IN")
-            
-        logger.info(f"Audio context transcribed: {text}")
-        result = mimi_system.process_text(text)
-        return jsonify({"status": "success", "text": text, "data": result})
-    except sr.UnknownValueError:
-        return jsonify({"status": "error", "message": "Could not understand audio"}), 400
-    except Exception as e:
-        logger.error(f"Chat audio error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 
 # @app.route('/activity-check', methods=['POST'])
 # def activity_check():
@@ -886,6 +797,7 @@ def generate_activity_questions():
 def save_activity_result():
     try:
         from datetime import datetime
+        from extensions import users  # ya jo bhi tumhara DB collection import hai
 
         data = request.get_json() or {}
 
@@ -902,7 +814,9 @@ def save_activity_result():
         }
 
         # ── 1. MongoDB mein save karo ──────────────────────────────
-        activity_results.insert_one(entry)
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
+        activity_collection = db["activity_results"]
+        activity_collection.insert_one(entry)
 
         # ── 2. Local JSON file mein bhi rakho (backup) ─────────────
         json_entry = {**entry, "id": int(datetime.now().timestamp() * 1000)}
@@ -916,9 +830,6 @@ def save_activity_result():
         return jsonify({"status": "success", "entry": entry})
 
     except Exception as e:
-        r = maybe_mongo_503(e)
-        if r is not None:
-            return r
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/get-student-stars/<student_id>', methods=['GET'])
@@ -926,21 +837,16 @@ def get_student_stars(student_id):
     """Return total and today's stars for a student."""
     try:
         from datetime import datetime
-        today   = datetime.now().strftime("%Y-%m-%d")
-        
-        # MongoDB se fetch karo
-        mine = list(activity_results.find({"student_id": student_id}))
-        
+        today   = datetime.now().strftime("%a %b %d %Y")
+        results = load_results()
+        mine    = [r for r in results if r.get("student_id") == student_id]
         return jsonify({
             "student_id":   student_id,
             "total_stars":  sum(r.get("stars", 0) for r in mine),
             "today_stars":  sum(r.get("stars", 0) for r in mine if r.get("date") == today),
-            "results":      [{**r, "_id": str(r["_id"])} for r in mine[:20]],
+            "results":      mine[:20],
         })
     except Exception as e:
-        r = maybe_mongo_503(e)
-        if r is not None:
-            return r
         return jsonify({"error": str(e)}), 500
 
 
@@ -970,27 +876,21 @@ def get_attendance():
 
 @app.route('/check-attendance', methods=['POST'])
 def check_attendance():
-    try:
-        data = request.get_json(silent=True) or {}
-        name = (data.get("student_name") or "").strip()
-        if not name:
-            return jsonify({"message": "error", "reason": "student_name required"}), 400
-        if system.attendance.is_marked(name):
-            return jsonify({"message": "already_marked"})
+
+    data = request.json
+    name = data.get("student_name")
+
+    if system.attendance.is_marked(name):
+        return jsonify({"message": "already_marked"})
+    else:
         return jsonify({"message": "not_marked"})
-    except Exception as e:
-        logger.exception("check_attendance")
-        return jsonify({"message": "error", "reason": str(e)}), 500
 
 
 @app.route('/register-face', methods=['POST'])
 def register_face():
     try:
-        if not _cv_available:
-            return jsonify(
-                {"status": "error", "message": "OpenCV / face_recognition not available on server"}
-            ), 501
-        fr = _face_recognition_lib
+        import cv2
+        import face_recognition as fr
         data = request.get_json() or {}
         name = (data.get("name") or "").strip()
         image = data.get("image", "")
@@ -1017,9 +917,6 @@ def register_face():
         system.known_names.append(safe_name)
         return jsonify({"status": "success", "name": safe_name})
     except Exception as e:
-        r = maybe_mongo_503(e)
-        if r is not None:
-            return r
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -1031,8 +928,11 @@ def get_student_id_by_name():
         if not name:
             return jsonify({"status": "error", "message": "Name required"}), 400
 
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
+        students_col = db["students"]
+
         # Case-insensitive search karo naam se
-        student = students.find_one(
+        student = students_col.find_one(
             {"name": {"$regex": f"^{name}$", "$options": "i"}}
         )
 
@@ -1049,9 +949,6 @@ def get_student_id_by_name():
             })
 
     except Exception as e:
-        r = maybe_mongo_503(e)
-        if r is not None:
-            return r
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -1066,20 +963,21 @@ def mark_attendance():
             return jsonify({"message": "error", "reason": "name required"}), 400
 
         today = datetime.now().strftime("%Y-%m-%d")
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # Already marked check
-        existing = attendance_collection.find_one({"name": name, "date": today})
+        existing = db["attendance"].find_one({"name": name, "date": today})
         if existing:
             return jsonify({"message": "already_marked"})
 
         # Students collection se real _id lo
-        student = students.find_one(
+        student = db["students"].find_one(
             {"name": {"$regex": f"^{name}$", "$options": "i"}}
         )
         student_id = student["_id"] if student else None
 
         # Attendance save karo
-        attendance_collection.insert_one({
+        db["attendance"].insert_one({
             "student_id": student_id,   # ✅ Real MongoDB ObjectId
             "name":       name,
             "date":       today,
@@ -1092,10 +990,8 @@ def mark_attendance():
 
     except Exception as e:
         print(f"[mark-attendance] ERROR: {e}")
-        r = maybe_mongo_503(e)
-        if r is not None:
-            return r
-        return jsonify({"message": "error", "reason": str(e)}), 500
+        return jsonify({"message": "error", "reason": str(e)}), 500  
+
 
 
 @app.route('/speak', methods=['POST'])
@@ -1104,35 +1000,21 @@ def speak_text():
     import edge_tts
     import tempfile
     import base64
-    data = request.get_json(silent=True) or {}
-    text = (data.get("text") or "").strip()
-    if not text:
-        return jsonify({"error": "text required"}), 400
-    tmp_path = None
-    try:
-        async def generate(text, path):
-            communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
-            await communicate.save(path)
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
-            tmp_path = f.name
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(generate(text, tmp_path))
-        finally:
-            loop.close()
-        with open(tmp_path, 'rb') as f:
-            audio_data = base64.b64encode(f.read()).decode()
-        return jsonify({'audio': audio_data})
-    except Exception as e:
-        logger.exception("speak_text")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if tmp_path and os.path.isfile(tmp_path):
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+    data = request.get_json()
+    text = data.get('text', '')
+    async def generate(text, path):
+        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+        await communicate.save(path)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+        tmp_path = f.name
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(generate(text, tmp_path))
+    loop.close()
+    with open(tmp_path, 'rb') as f:
+        audio_data = base64.b64encode(f.read()).decode()
+    os.remove(tmp_path)
+    return jsonify({'audio': audio_data})
 
     
 @app.route('/process-frame', methods=['POST'])
@@ -1158,7 +1040,7 @@ def process_frame():
                 "message": "Backend missing face_recognition or opencv. Please install them in your venv."
             }), 501
 
-        data = request.get_json(silent=True) or {}
+        data = request.get_json()
         img_data = data.get('image', '')
         if not img_data:
             return jsonify({"status": "no_image", "person": None})
@@ -1207,7 +1089,6 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(whatsapp_bp)
 app.register_blueprint(parent_bp)
-app.register_blueprint(teacher_bp)
 
 
 if __name__ == "__main__":
