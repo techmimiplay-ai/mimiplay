@@ -646,9 +646,17 @@ import re
 import os
 import csv
 from pymongo import MongoClient  # MongoDB ke liye import
+import speech_recognition as sr
+from pydub import AudioSegment
+import io
 from datetime import datetime
 from bson import ObjectId
 from bson.json_util import dumps
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 from routes.auth_routes import auth_bp
 from routes.admin_routes import admin_bp
 from routes.whatsapp_route import whatsapp_bp
@@ -1213,6 +1221,72 @@ def mimi_get():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/mimi-chat', methods=['POST'])
+def mimi_chat():
+    try:
+        data = request.get_json() or {}
+        text = data.get("text", "")
+        if not text:
+            return jsonify({"status": "error", "message": "No text provided"}), 400
+            
+        result = mimi_system.process_text(text)
+        return jsonify({"status": "success", "data": result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/mimi-wake', methods=['POST'])
+def mimi_wake():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({"status": "error", "message": "No audio"}), 400
+        audio_file = request.files['audio']
+        audio = AudioSegment.from_file(io.BytesIO(audio_file.read()))
+        wav_buffer = io.BytesIO()
+        audio.export(wav_buffer, format="wav")
+        wav_buffer.seek(0)
+        
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(wav_buffer) as source:
+            audio_data = recognizer.record(source)
+            text = recognizer.recognize_google(audio_data, language="en-IN").lower()
+            
+        logger.info(f"Wake check transcribed: {text}")
+        if any(term in text for term in ['alexi', 'alexa', 'alex', 'hey alexi', 'hi alexi']):
+            return jsonify({"status": "success", "wake": True, "text": text})
+        return jsonify({"status": "success", "wake": False, "text": text})
+    except sr.UnknownValueError:
+        return jsonify({"status": "success", "wake": False, "message": "silent"})
+    except Exception as e:
+        logger.error(f"Wake error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/mimi-chat-audio', methods=['POST'])
+def mimi_chat_audio():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({"status": "error", "message": "No audio"}), 400
+        audio_file = request.files['audio']
+        audio = AudioSegment.from_file(io.BytesIO(audio_file.read()))
+        wav_buffer = io.BytesIO()
+        audio.export(wav_buffer, format="wav")
+        wav_buffer.seek(0)
+        
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(wav_buffer) as source:
+            audio_data = recognizer.record(source)
+            text = recognizer.recognize_google(audio_data, language="en-IN")
+            
+        logger.info(f"Audio context transcribed: {text}")
+        result = mimi_system.process_text(text)
+        return jsonify({"status": "success", "text": text, "data": result})
+    except sr.UnknownValueError:
+        return jsonify({"status": "error", "message": "Could not understand audio"}), 400
+    except Exception as e:
+        logger.error(f"Chat audio error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # @app.route('/activity-check', methods=['POST'])

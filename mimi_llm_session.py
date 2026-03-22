@@ -513,6 +513,25 @@ class MimiLLMSession:
             self.current_action = 'showing'
             time.sleep(4)
 
+    def process_text(self, user_text):
+        """Processes a single text input from the frontend."""
+        self.current_action = 'thinking'
+        self.current_text = 'Thinking...'
+        
+        try:
+            llm_json = self._get_llm_response_json(user_text)
+            
+            # update instance fields for polling
+            self.current_text = llm_json.get('text')
+            self.current_image = llm_json.get('image_url')
+            self.current_video = llm_json.get('yt_video')
+            self.current_action = 'speaking'
+            
+            return llm_json
+        except Exception as e:
+            logger.error("Error in process_text: %s", e)
+            return {"text": "Sorry, I encountered an error while thinking.", "error": str(e)}
+
     def start(self):
         if self._thread and self._thread.is_alive():
             return
