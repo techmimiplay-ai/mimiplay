@@ -270,6 +270,31 @@ except Exception:
         SpeechRecognizer = None
 
 logger = logging.getLogger(__name__)
+
+_PLACEHOLDER_KEYS = frozenset(
+    {
+        "YOUR_OPENAI_KEY_HERE",
+        "YOUR_ANTHROPIC_KEY_HERE",
+        "",
+    }
+)
+
+
+def _normalize_api_key(value):
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s or s in _PLACEHOLDER_KEYS:
+        return None
+    return s
+
+
+try:
+    import openai as _openai_sdk
+except ImportError:
+    _openai_sdk = None
+
+
 class MimiLLMSession:
     """Simple LLM-backed interactive session for Mimi.
 
@@ -281,7 +306,7 @@ class MimiLLMSession:
       - Speak `text` and expose the current response via attributes accessed by Flask
     """
 
-    def __init__(self):
+    def __init__(self, openai_api_key=None, anthropic_api_key=None):
         self.speech = SpeechManager()
         self.mic = SpeechRecognizer()
 
@@ -293,20 +318,27 @@ class MimiLLMSession:
         self._stop = False
         self._thread = None
 
-        # Choose provider by env vars
-        self.openai_key = os.environ.get('OPENAI_API_KEY')
-        self.anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
+        # Prefer explicit keys (e.g. from app.py); else environment
+        self.openai_key = _normalize_api_key(
+            openai_api_key if openai_api_key is not None else os.environ.get("OPENAI_API_KEY")
+        )
+        self.anthropic_key = _normalize_api_key(
+            anthropic_api_key
+            if anthropic_api_key is not None
+            else os.environ.get("ANTHROPIC_API_KEY")
+        )
 
-        logger.info('MimiLLMSession ready (OpenAI:%s Anthropic:%s)'
-                    % (bool(self.openai_key), bool(self.anthropic_key)))
+        logger.info(
+            "MimiLLMSession ready (OpenAI:%s Anthropic:%s)",
+            bool(self.openai_key),
+            bool(self.anthropic_key),
+        )
 
     # --------------------------- LLM helpers ---------------------------
     def _call_openai(self, prompt):
         api_key = self.openai_key
         if not api_key:
             return None
-        url = 'https://api.openai.com/v1/chat/completions'
-        headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
         system_instructions = (
             "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. "
             "Your goal is to educate and inform children in a simple, fun way.\n\n"
@@ -316,28 +348,52 @@ class MimiLLMSession:
             "Always be encouraging and upbeat.\n\n"
             "RESPONSE FORMAT: Reply ONLY with a JSON object. Keys: text, image_search_term, youtube_search_term.\n"
             "- text: 1-2 short simple sentences in English only. Max 1-2 Hindi words allowed. No questions.\n"
-            "- image_search_term: short search term to find image on Wikimedia. Example: African elephant\n"
-            "- youtube_search_term: short search term to find YouTube video for kids. Otherwise null.\n"
-            "Example: {\"text\": \"Elephant ek bahut bada janwar hai!\", \"image_search_term\": \"African elephant.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg\", \"yt_video\": null}"
+            "- image_search_term: short plain search phrase for Wikimedia (e.g. \"African bush elephant\"). Not a URL.\n"
+            "- youtube_search_term: short phrase to find a kid-friendly YouTube clip, or null.\n"
+            'Example: {"text": "An elephant is a very big animal!", "image_search_term": "African bush elephant", "youtube_search_term": null}'
         )
+        user_message = (
+            f'Transcribed speech from a child: "{prompt}"\n'
+            "Answer helpfully as Mimi. Output JSON only."
+        )
+        try:
+            if _openai_sdk is not None:
+                client = _openai_sdk.OpenAI(api_key=api_key)
+                resp = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_instructions},
+                        {"role": "user", "content": user_message},
+                    ],
+                    temperature=0.6,
+                    max_tokens=400,
+                )
+                text = resp.choices[0].message.content
+                print("RAW LLM:", text)
+                return text
+        except Exception as e:
+            logger.error("OpenAI SDK call failed: %s", e)
+
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         body = {
-            'model': 'gpt-4o-mini',
-            'messages': [
-                {'role': 'system', 'content': system_instructions},
-                {'role': 'user', 'content': prompt}
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_instructions},
+                {"role": "user", "content": user_message},
             ],
-            'temperature': 0.6,
-            'max_tokens': 400
+            "temperature": 0.6,
+            "max_tokens": 400,
         }
         try:
-            r = requests.post(url, headers=headers, json=body, timeout=20)
+            r = requests.post(url, headers=headers, json=body, timeout=60)
             r.raise_for_status()
             data = r.json()
-            text = data['choices'][0]['message']['content']
-            print('RAW LLM:', text)
+            text = data["choices"][0]["message"]["content"]
+            print("RAW LLM:", text)
             return text
         except Exception as e:
-            logger.error('OpenAI call failed: %s', e)
+            logger.error("OpenAI HTTP call failed: %s", e)
             return ""
 
     def _call_anthropic(self, prompt):
@@ -413,19 +469,30 @@ class MimiLLMSession:
         if not text and self.anthropic_key:
             text = self._call_anthropic(user_text)
         if not text:
-            return {'text': "Sorry, I cannot connect right now.", 'image_url': None, 'yt_video': None}
+            return {
+                "text": "Sorry, I cannot reach OpenAI right now. Check OPENAI_API_KEY.",
+                "image_url": None,
+                "yt_video": None,
+                "provider": None,
+            }
         data = self._parse_json_response(text)
         if not data:
-            return {'text': text.strip(), 'image_url': None, 'yt_video': None}
-        search = data.get('image_search_term') or ''
-        print('WIKIMEDIA SEARCH:', search)
+            return {
+                "text": text.strip(),
+                "image_url": None,
+                "yt_video": None,
+                "provider": "openai" if self.openai_key else "anthropic",
+            }
+        search = data.get("image_search_term") or ""
+        print("WIKIMEDIA SEARCH:", search)
         image_url = self._fetch_wikimedia_image(search)
-        print('WIKIMEDIA RESULT:', image_url)
+        print("WIKIMEDIA RESULT:", image_url)
         yt_video = None
         return {
-            'text': data.get('text') or '',
-            'image_url': image_url,
-            'yt_video': yt_video
+            "text": data.get("text") or "",
+            "image_url": image_url,
+            "yt_video": yt_video,
+            "provider": "openai" if self.openai_key else "anthropic",
         }
 
     def run(self):

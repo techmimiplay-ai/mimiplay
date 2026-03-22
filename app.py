@@ -5,6 +5,13 @@ import threading
 import json
 import re
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load mimiplay/.env first so OPENAI_API_KEY / MONGODB_URI etc. are set before any route imports.
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 import csv
 from pymongo import MongoClient  # MongoDB ke liye import
 import speech_recognition as sr
@@ -59,10 +66,15 @@ except ImportError:
     _anthropic_available = False
 
 # =============================================================================
-# CONFIG — set your API keys here OR use environment variables
+# CONFIG — API keys: use environment only (e.g. export OPENAI_API_KEY=... or mimiplay/.env)
 # =============================================================================
-OPENAI_API_KEY    = os.environ.get("OPENAI_API_KEY",    "YOUR_OPENAI_KEY_HERE")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "YOUR_ANTHROPIC_KEY_HERE")
+def _env_secret(name: str):
+    v = os.environ.get(name)
+    return v.strip() if isinstance(v, str) and v.strip() else None
+
+
+OPENAI_API_KEY = _env_secret("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = _env_secret("ANTHROPIC_API_KEY")
 
 # Local file to store activity results (no MongoDB needed)
 RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
@@ -72,7 +84,10 @@ CORS(app)
 
 # System initialize karein
 system = FaceRecognitionSystem()
-mimi_system = MimiLLMSession()
+mimi_system = MimiLLMSession(
+    openai_api_key=OPENAI_API_KEY,
+    anthropic_api_key=ANTHROPIC_API_KEY,
+)
 
 
 # =============================================================================
@@ -763,8 +778,8 @@ def generate_activity_questions():
 
         print(f"\n{'='*60}")
         print(f"[generate-questions] REQUEST: activity={activity_id}, difficulty={difficulty}, count={count}, seed={session_seed}")
-        print(f"[generate-questions] OpenAI available: {_openai_available}, key set: {OPENAI_API_KEY != 'YOUR_OPENAI_KEY_HERE'}")
-        print(f"[generate-questions] Anthropic available: {_anthropic_available}, key set: {ANTHROPIC_API_KEY != 'YOUR_ANTHROPIC_KEY_HERE'}")
+        print(f"[generate-questions] OpenAI available: {_openai_available}, key set: {bool(OPENAI_API_KEY)}")
+        print(f"[generate-questions] Anthropic available: {_anthropic_available}, key set: {bool(ANTHROPIC_API_KEY)}")
 
         # Validate
         if activity_id not in QUESTION_PROMPTS:
@@ -784,7 +799,7 @@ def generate_activity_questions():
         used_provider = None
 
         try:
-            if _openai_available and OPENAI_API_KEY != "YOUR_OPENAI_KEY_HERE":
+            if _openai_available and OPENAI_API_KEY:
                 print("[generate-questions] Trying OpenAI...")
                 raw = _call_openai_raw(prompt, max_tokens=1000, temperature=1.0)
                 used_provider = "OpenAI"
@@ -797,7 +812,7 @@ def generate_activity_questions():
 
         if not raw:
             try:
-                if _anthropic_available and ANTHROPIC_API_KEY != "YOUR_ANTHROPIC_KEY_HERE":
+                if _anthropic_available and ANTHROPIC_API_KEY:
                     print("[generate-questions] Trying Anthropic...")
                     raw = _call_anthropic_raw(prompt, max_tokens=1000, temperature=1.0)
                     used_provider = "Anthropic"
