@@ -76,11 +76,125 @@ def _env_secret(name: str):
 OPENAI_API_KEY = _env_secret("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = _env_secret("ANTHROPIC_API_KEY")
 
+# Filled by _run_llm_startup_checks(); exposed on GET /api/health/llm
+LLM_HEALTH = {
+    "openai": "unknown",
+    "openai_detail": None,
+    "anthropic": "unknown",
+    "anthropic_detail": None,
+}
+
+
+def _mask_api_key_for_log(key: str | None) -> str:
+    if not key:
+        return "not set"
+    n = len(key)
+    tail = key[-4:] if n >= 4 else "****"
+    return f"loaded (len={n}, suffix ...{tail})"
+
+
+def _healthcheck_openai_key(key: str | None) -> tuple[str, str | None]:
+    if not key:
+        return "unset", None
+    if not _openai_available:
+        return "skipped", "openai package not installed"
+    try:
+        client = openai.OpenAI(api_key=key, timeout=20.0)
+        client.models.list()
+        return "ok", None
+    except Exception as e:
+        return "fail", str(e)[:300]
+
+
+def _healthcheck_anthropic_key(key: str | None) -> tuple[str, str | None]:
+    if not key:
+        return "unset", None
+    if not _anthropic_available:
+        return "skipped", "anthropic package not installed"
+    try:
+        client = anthropic.Anthropic(api_key=key, timeout=20.0)
+        client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1,
+            messages=[{"role": "user", "content": "ping"}],
+        )
+        return "ok", None
+    except Exception as e:
+        return "fail", str(e)[:300]
+
+
+def _run_llm_startup_checks():
+    """Log key presence (masked) and verify keys against provider APIs."""
+    global LLM_HEALTH
+    logger.info("[LLM] OPENAI_API_KEY %s", _mask_api_key_for_log(OPENAI_API_KEY))
+    logger.info("[LLM] ANTHROPIC_API_KEY %s", _mask_api_key_for_log(ANTHROPIC_API_KEY))
+
+    skip = os.environ.get("SKIP_LLM_HEALTHCHECK", "").lower() in ("1", "true", "yes")
+    if skip:
+        logger.info("[LLM] API health check skipped (SKIP_LLM_HEALTHCHECK=1)")
+        LLM_HEALTH["openai"] = "skipped" if OPENAI_API_KEY else "unset"
+        LLM_HEALTH["openai_detail"] = None
+        LLM_HEALTH["anthropic"] = "skipped" if ANTHROPIC_API_KEY else "unset"
+        LLM_HEALTH["anthropic_detail"] = None
+        return
+
+    o_status, o_err = _healthcheck_openai_key(OPENAI_API_KEY)
+    LLM_HEALTH["openai"] = o_status
+    LLM_HEALTH["openai_detail"] = o_err
+    if o_status == "ok":
+        logger.info("[LLM] OpenAI health: OK (API key accepted)")
+    elif o_status == "unset":
+        logger.warning("[LLM] OpenAI health: no key configured")
+    else:
+        logger.warning("[LLM] OpenAI health: %s%s", o_status, f" — {o_err}" if o_err else "")
+
+    a_status, a_err = _healthcheck_anthropic_key(ANTHROPIC_API_KEY)
+    LLM_HEALTH["anthropic"] = a_status
+    LLM_HEALTH["anthropic_detail"] = a_err
+    if a_status == "ok":
+        logger.info("[LLM] Anthropic health: OK (API key accepted)")
+    elif a_status == "unset":
+        logger.info("[LLM] Anthropic health: no key configured (optional)")
+    else:
+        logger.warning("[LLM] Anthropic health: %s%s", a_status, f" — {a_err}" if a_err else "")
+
+
+_run_llm_startup_checks()
+
 # Local file to store activity results (no MongoDB needed)
 RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
+
+
+@app.route("/api/health/llm", methods=["GET"])
+def health_llm():
+    """Last OpenAI/Anthropic check results. Use ?refresh=1 to re-verify keys (calls provider APIs)."""
+    global LLM_HEALTH
+    if request.args.get("refresh") == "1":
+        o_status, o_err = _healthcheck_openai_key(OPENAI_API_KEY)
+        a_status, a_err = _healthcheck_anthropic_key(ANTHROPIC_API_KEY)
+        LLM_HEALTH = {
+            "openai": o_status,
+            "openai_detail": o_err,
+            "anthropic": a_status,
+            "anthropic_detail": a_err,
+        }
+        logger.info(
+            "[LLM] Health refresh: openai=%s anthropic=%s",
+            o_status,
+            a_status,
+        )
+    body = {
+        "openai": LLM_HEALTH.get("openai"),
+        "anthropic": LLM_HEALTH.get("anthropic"),
+    }
+    if request.args.get("debug") == "1":
+        body["openai_detail"] = LLM_HEALTH.get("openai_detail")
+        body["anthropic_detail"] = LLM_HEALTH.get("anthropic_detail")
+    return jsonify(body)
+
 
 # System initialize karein
 system = FaceRecognitionSystem()
