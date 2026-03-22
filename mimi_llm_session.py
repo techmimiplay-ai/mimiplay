@@ -369,10 +369,14 @@ class MimiLLMSession:
                     max_tokens=400,
                 )
                 text = resp.choices[0].message.content
-                print("RAW LLM:", text)
+                logger.info("OpenAI SDK call success: %s", text[:50] + "...")
                 return text
         except Exception as e:
             logger.error("OpenAI SDK call failed: %s", e)
+            if "insufficient_quota" in str(e).lower():
+                logger.error("OpenAI Error: Insufficient quota. Check your billing/balance.")
+            elif "invalid_api_key" in str(e).lower():
+                logger.error("OpenAI Error: Invalid API key.")
 
         url = "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -400,33 +404,55 @@ class MimiLLMSession:
         api_key = self.anthropic_key
         if not api_key:
             return None
-        url = 'https://api.anthropic.com/v1/complete'
-        headers = {'x-api-key': api_key, 'Content-Type': 'application/json'}
-        # Anthropic: provide the same detailed Mimi instructions
+        
+        # Anthropic instructions
         anthropic_instructions = (
             "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. "
-            "Speak in simple Hinglish, use very simple words, keep tone happy and encouraging. Keep replies 1-2 short sentences and end with a playful question.\n\n"
-            "RULES: No scary, violent, adult, or political topics. Provide emotional support when child is sad.\n\n"
-            "DEV: Prefer gentle voices (alloy/shimmer) and suggest 'turn_detection: server_vad' and 'silence_duration_ms' ~800-1000ms when applicable.\n\n"
+            "Speak mostly in simple English with only 1-2 Hindi words, use very simple words, keep tone happy and encouraging. Keep replies 1-2 short sentences.\n\n"
             "OUTPUT: Reply ONLY with a JSON object {text, image_url, yt_video} where 'text' is 1-2 short sentences for ages 3-5."
         )
+
+        try:
+            # Try using the SDK if available (matching app.py style)
+            import anthropic as _anth_sdk
+            client = _anth_sdk.Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=400,
+                messages=[
+                    {"role": "user", "content": f"{anthropic_instructions}\n\nUser: {prompt}"}
+                ],
+            )
+            text = resp.content[0].text
+            logger.info("Anthropic SDK call success: %s", text[:50] + "...")
+            return text
+        except ImportError:
+            logger.warning("Anthropic SDK not installed, falling back to HTTP")
+        except Exception as e:
+            logger.error("Anthropic SDK call failed: %s", e)
+
+        # Fallback to direct HTTP with Messages API (v1/messages)
+        url = 'https://api.anthropic.com/v1/messages'
+        headers = {
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json'
+        }
         body = {
-            'model': 'claude-2',
-            'prompt': (
-                anthropic_instructions + '\n\n' + f'User: {prompt}\nMimi:'
-            ),
+            'model': 'claude-3-haiku-20240307',
             'max_tokens': 400,
-            'temperature': 0.6
+            'messages': [
+                {'role': 'user', 'content': f"{anthropic_instructions}\n\nUser: {prompt}"}
+            ]
         }
         try:
             r = requests.post(url, headers=headers, json=body, timeout=20)
             r.raise_for_status()
             data = r.json()
-            # Anthropic returns 'completion' key
-            text = data.get('completion') or data.get('completion_text')
+            text = data['content'][0]['text']
             return text
         except Exception as e:
-            logger.error('Anthropic call failed: %s', e)
+            logger.error('Anthropic HTTP call failed: %s', e)
             return None
 
 

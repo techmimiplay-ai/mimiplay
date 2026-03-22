@@ -210,14 +210,21 @@ mimi_system = MimiLLMSession(
 def _call_openai(prompt: str, max_tokens: int = 200) -> dict:
     if not _openai_available:
         raise RuntimeError("openai not installed")
-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens,
-        temperature=0.2,
-    )
-    return _parse_json(resp.choices[0].message.content)
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=0.2,
+        )
+        text = resp.choices[0].message.content
+        return _parse_json(text)
+    except Exception as e:
+        logger.error("OpenAI call failed in app.py: %s", e)
+        if "insufficient_quota" in str(e).lower():
+            logger.error("OpenAI Error: Insufficient quota. Check your billing/balance.")
+        raise
 
 
 def _call_openai_raw(prompt: str, max_tokens: int = 1000, temperature: float = 1.0) -> str:
@@ -237,13 +244,17 @@ def _call_openai_raw(prompt: str, max_tokens: int = 1000, temperature: float = 1
 def _call_anthropic(prompt: str, max_tokens: int = 200) -> dict:
     if not _anthropic_available:
         raise RuntimeError("anthropic not installed")
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=max_tokens,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return _parse_json(resp.content[0].text)
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        resp = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return _parse_json(resp.content[0].text)
+    except Exception as e:
+        logger.error("Anthropic call failed in app.py: %s", e)
+        raise
 
 
 def _call_anthropic_raw(prompt: str, max_tokens: int = 1000, temperature: float = 1.0) -> str:

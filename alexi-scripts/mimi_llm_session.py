@@ -342,11 +342,13 @@ class MimiLLMSession:
             r.raise_for_status()
             data = r.json()
             text = data['choices'][0]['message']['content']
-            logger.info('RAW LLM: %s', text)
+            logger.info('OpenAI HTTP call success: %s', text[:50] + "...")
             return text
 
         except Exception as e:
             logger.error('OpenAI call failed: %s', e)
+            if "insufficient_quota" in str(e).lower():
+                logger.error("OpenAI Error: Insufficient quota. Check your billing/balance.")
             return None
 
     def _call_anthropic(self, prompt):
