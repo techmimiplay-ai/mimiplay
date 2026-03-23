@@ -271,22 +271,7 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-_PLACEHOLDER_KEYS = frozenset(
-    {
-        "YOUR_OPENAI_KEY_HERE",
-        "YOUR_ANTHROPIC_KEY_HERE",
-        "",
-    }
-)
 
-
-def _normalize_api_key(value):
-    if value is None:
-        return None
-    s = str(value).strip()
-    if not s or s in _PLACEHOLDER_KEYS:
-        return None
-    return s
 
 
 try:
@@ -318,15 +303,9 @@ class MimiLLMSession:
         self._stop = False
         self._thread = None
 
-        # Prefer explicit keys (e.g. from app.py); else environment
-        self.openai_key = _normalize_api_key(
-            openai_api_key if openai_api_key is not None else os.environ.get("OPENAI_API_KEY")
-        )
-        self.anthropic_key = _normalize_api_key(
-            anthropic_api_key
-            if anthropic_api_key is not None
-            else os.environ.get("ANTHROPIC_API_KEY")
-        )
+        # Read API keys: use explicit args if provided, else fall back to environment
+        self.openai_key = openai_api_key if openai_api_key is not None else os.environ.get("OPENAI_API_KEY")
+        self.anthropic_key = anthropic_api_key if anthropic_api_key is not None else os.environ.get("ANTHROPIC_API_KEY")
 
         logger.info(
             "MimiLLMSession ready (OpenAI:%s Anthropic:%s)",
@@ -338,7 +317,9 @@ class MimiLLMSession:
     def _call_openai(self, prompt):
         api_key = self.openai_key
         if not api_key:
+            logger.warning("_call_openai: no API key, skipping")
             return None
+        logger.info("_call_openai: calling OpenAI (key len=%d)", len(api_key))
         system_instructions = (
             "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. "
             "Your goal is to educate and inform children in a simple, fun way.\n\n"
@@ -368,16 +349,18 @@ class MimiLLMSession:
                     temperature=0.6,
                     max_tokens=400,
                 )
-                text = resp.choices[0].message.content
-                logger.info("OpenAI SDK call success: %s", text[:50] + "...")
-                return text
+                text = resp.choices[0].message.content  # may be None
+                if text:
+                    logger.info("OpenAI SDK call success: %s...", text[:60])
+                    return text
+                else:
+                    logger.warning("OpenAI SDK returned empty/None content (finish_reason=%s)",
+                                   resp.choices[0].finish_reason)
+                    return None
         except Exception as e:
-            logger.error("OpenAI SDK call failed: %s", e)
-            if "insufficient_quota" in str(e).lower():
-                logger.error("OpenAI Error: Insufficient quota. Check your billing/balance.")
-            elif "invalid_api_key" in str(e).lower():
-                logger.error("OpenAI Error: Invalid API key.")
+            logger.error("OpenAI SDK call failed: %s", e, exc_info=True)
 
+        # HTTP fallback
         url = "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         body = {
@@ -392,13 +375,12 @@ class MimiLLMSession:
         try:
             r = requests.post(url, headers=headers, json=body, timeout=60)
             r.raise_for_status()
-            data = r.json()
-            text = data["choices"][0]["message"]["content"]
-            print("RAW LLM:", text)
-            return text
+            text = r.json()["choices"][0]["message"]["content"]
+            logger.info("OpenAI HTTP call success: %s...", (text or "")[:60])
+            return text or None
         except Exception as e:
-            logger.error("OpenAI HTTP call failed: %s", e)
-            return ""
+            logger.error("OpenAI HTTP call failed: %s", e, exc_info=True)
+            return None
 
     def _call_anthropic(self, prompt):
         api_key = self.anthropic_key
