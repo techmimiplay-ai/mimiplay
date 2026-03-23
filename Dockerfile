@@ -21,4 +21,7 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "app.py"]
+# Remove .env so Railway's injected env vars are always used in production
+RUN rm -f .env .env.* 
+
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "4", "--timeout", "120"]
