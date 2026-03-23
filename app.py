@@ -10,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load mimiplay/.env first so OPENAI_API_KEY / MONGODB_URI etc. are set before any route imports.
-load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
 import csv
 from pymongo import MongoClient  # MongoDB ke liye import
