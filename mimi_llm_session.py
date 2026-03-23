@@ -471,14 +471,41 @@ class MimiLLMSession:
         return None
 
     def _get_llm_response_json(self, user_text):
+        def mask(k):
+            if not k: return "None"
+            s = str(k)
+            if len(s) < 10: return "***"
+            return f"{s[:6]}...{s[-4:]}"
+
         text = None
+        openai_err = None
+        anthropic_err = None
+
+        logger.info("[LLM] Attempting OpenAI with key %s", mask(self.openai_key))
         if self.openai_key:
-            text = self._call_openai(user_text)
+            try:
+                text = self._call_openai(user_text)
+            except Exception as e:
+                openai_err = str(e)
+                logger.error("[LLM] OpenAI call threw exception: %s", e)
+        
         if not text and self.anthropic_key:
-            text = self._call_anthropic(user_text)
+            logger.info("[LLM] Trying Anthropic fallback with key %s", mask(self.anthropic_key))
+            try:
+                text = self._call_anthropic(user_text)
+            except Exception as e:
+                anthropic_err = str(e)
+                logger.error("[LLM] Anthropic call threw exception: %s", e)
+
         if not text:
+            msg = "Sorry, I cannot reach any AI provider right now."
+            if not self.openai_key and not self.anthropic_key:
+                msg = "No API keys configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY."
+            elif openai_err or anthropic_err:
+                msg = f"AI Error. OpenAI: {openai_err or 'failed'}, Anthropic: {anthropic_err or 'failed'}"
+            
             return {
-                "text": "Sorry, I cannot reach OpenAI right now. Check OPENAI_API_KEY.",
+                "text": msg,
                 "image_url": None,
                 "yt_video": None,
                 "provider": None,
