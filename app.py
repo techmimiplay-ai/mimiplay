@@ -10,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load mimiplay/.env first so OPENAI_API_KEY / MONGODB_URI etc. are set before any route imports.
-load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 import csv
 from pymongo import MongoClient  # MongoDB ke liye import
@@ -22,16 +22,12 @@ from bson import ObjectId
 from bson.json_util import dumps
 import logging
 import sys
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stdout,           # send to stdout, not stderr
-    force=True,
-)
+import asyncio
+import edge_tts
+import tempfile
+import base64
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-logging.getLogger("httpx").setLevel(logging.DEBUG)
-logging.getLogger("openai").setLevel(logging.DEBUG)
-logging.getLogger("anthropic").setLevel(logging.DEBUG)
 
 from routes.auth_routes import auth_bp
 from routes.admin_routes import admin_bp
@@ -41,9 +37,6 @@ from routes.teacher_routes import teacher_bp
 from extensions import users, attendance_collection, bcrypt
 import jwt
 import base64
-
-
-
 
 try:
     # Prefer the face_detection module inside the face_detection/ folder
@@ -176,26 +169,8 @@ _run_llm_startup_checks()
 RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["http://localhost:5173"])
 
-@app.before_request
-def log_request():
-    logger.info("→ %s %s | body=%s", request.method, request.path, 
-                str(request.get_data(as_text=True))[:200])
-
-@app.after_request  
-def log_response(response):
-    logger.info("← %s %s | status=%s", request.method, request.path, response.status_code)
-    return response
-
-@app.route('/debug-keys', methods=['GET'])
-def debug_keys():
-    return jsonify({
-        "openai_raw": repr(os.environ.get("OPENAI_API_KEY", "NOT SET")),
-        "anthropic_raw": repr(os.environ.get("ANTHROPIC_API_KEY", "NOT SET")),
-        "openai_len": len(os.environ.get("OPENAI_API_KEY", "")),
-        "anthropic_len": len(os.environ.get("ANTHROPIC_API_KEY", "")),
-    })
 
 @app.route("/api/health/llm", methods=["GET"])
 def health_llm():
@@ -210,11 +185,6 @@ def health_llm():
             "anthropic": a_status,
             "anthropic_detail": a_err,
         }
-        logger.info(
-            "[LLM] Health refresh: openai=%s anthropic=%s",
-            o_status,
-            a_status,
-        )
     body = {
         "openai": LLM_HEALTH.get("openai"),
         "anthropic": LLM_HEALTH.get("anthropic"),
@@ -223,6 +193,45 @@ def health_llm():
         body["openai_detail"] = LLM_HEALTH.get("openai_detail")
         body["anthropic_detail"] = LLM_HEALTH.get("anthropic_detail")
     return jsonify(body)
+
+
+def _generate_tts_audio_base64(text: str) -> str:
+    """Generates base64 encoded MP3 audio using edge-tts."""
+    if not text:
+        return ""
+    async def generate(text, path):
+        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+        await communicate.save(path)
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+            tmp_path = f.name
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(generate(text, tmp_path))
+        finally:
+            loop.close()
+        with open(tmp_path, 'rb') as f:
+            audio_data = base64.b64encode(f.read()).decode()
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return audio_data
+    except Exception as e:
+        logger.error("Error generating TTS audio: %s", e)
+        return ""
+
+
+@app.route('/speak', methods=['POST'])
+def speak_text():
+    """Generates audio from text using edge-tts and returns it as base64."""
+    data = request.get_json()
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+    audio_data = _generate_tts_audio_base64(text)
+    if not audio_data:
+        return jsonify({'error': 'Failed to generate audio'}), 500
+    return jsonify({'audio': audio_data})
 
 
 # System initialize karein
@@ -739,17 +748,26 @@ def start_mimi_session():
 
 @app.route('/mimi-get', methods=['GET'])
 def mimi_get():
+    """Returns the current state of MimiLLMSession including cached audio."""
     try:
+        current_text = getattr(mimi_system, 'current_text', None)
         resp = {
-            'text': getattr(mimi_system, 'current_text', None),
+            'text': current_text,
             'image_url': getattr(mimi_system, 'current_image', None),
             'yt_video': getattr(mimi_system, 'current_video', None),
-            # 'image_url': getattr(mimi_system, 'image_url', None),  # <-- 'current_image' ko 'image_url' kiya
-            # 'yt_video': getattr(mimi_system, 'yt_video', None),    # <-- 'current_video' ko 'yt_video' kiya
             'action': getattr(mimi_system, 'current_action', 'idle')
         }
+        
+        # Audio Caching Logic
+        if current_text and current_text != "Thinking...":
+            if getattr(mimi_system, 'current_audio_text', None) != current_text:
+                mimi_system.current_audio = _generate_tts_audio_base64(current_text)
+                mimi_system.current_audio_text = current_text
+            resp["audio"] = getattr(mimi_system, 'current_audio', None)
+            
         return jsonify(resp)
     except Exception as e:
+        logger.error("Error in mimi_get: %s", e)
         return jsonify({'error': str(e)}), 500
 
 
@@ -762,6 +780,10 @@ def mimi_chat():
             return jsonify({"status": "error", "message": "No text provided"}), 400
             
         result = mimi_system.process_text(text)
+        if result and result.get("text"):
+            mimi_system.current_audio = _generate_tts_audio_base64(result["text"])
+            mimi_system.current_audio_text = result["text"]
+            result["audio"] = mimi_system.current_audio
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -812,6 +834,10 @@ def mimi_chat_audio():
             
         logger.info(f"Audio context transcribed: {text}")
         result = mimi_system.process_text(text)
+        if result and result.get("text"):
+            mimi_system.current_audio = _generate_tts_audio_base64(result["text"])
+            mimi_system.current_audio_text = result["text"]
+            result["audio"] = mimi_system.current_audio
         return jsonify({"status": "success", "text": text, "data": result})
     except sr.UnknownValueError:
         return jsonify({"status": "error", "message": "Could not understand audio"}), 400
@@ -1238,27 +1264,27 @@ def mark_attendance():
 
 
 
-@app.route('/speak', methods=['POST'])
-def speak_text():
-    import asyncio
-    import edge_tts
-    import tempfile
-    import base64
-    data = request.get_json()
-    text = data.get('text', '')
-    async def generate(text, path):
-        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
-        await communicate.save(path)
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
-        tmp_path = f.name
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(generate(text, tmp_path))
-    loop.close()
-    with open(tmp_path, 'rb') as f:
-        audio_data = base64.b64encode(f.read()).decode()
-    os.remove(tmp_path)
-    return jsonify({'audio': audio_data})
+# @app.route('/speak', methods=['POST'])
+# def speak_text():
+#     import asyncio
+#     import edge_tts
+#     import tempfile
+#     import base64
+#     data = request.get_json()
+#     text = data.get('text', '')
+#     async def generate(text, path):
+#         communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+#         await communicate.save(path)
+#     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+#         tmp_path = f.name
+#     loop = asyncio.new_event_loop()
+#     asyncio.set_event_loop(loop)
+#     loop.run_until_complete(generate(text, tmp_path))
+#     loop.close()
+#     with open(tmp_path, 'rb') as f:
+#         audio_data = base64.b64encode(f.read()).decode()
+#     os.remove(tmp_path)
+#     return jsonify({'audio': audio_data})
 
     
 @app.route('/process-frame', methods=['POST'])
@@ -1338,4 +1364,4 @@ app.register_blueprint(teacher_bp)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, port=port, host='0.0.0.0')
+    app.run(debug=False, port=port, host='0.0.0.0')

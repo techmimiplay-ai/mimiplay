@@ -45,6 +45,8 @@ class MimiLLMSession:
         self.current_text = None
         self.current_image = None
         self.current_video = None
+        self.current_audio = None
+        self.current_audio_text = None
         self.current_action = 'idle'  # idle | speaking | listening | showing
         self._stop = False
         self._thread = None
