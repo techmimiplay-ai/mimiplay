@@ -169,7 +169,7 @@ _run_llm_startup_checks()
 RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173"])
+CORS(app, origins=["https://hilearn-test.com", "https://www.hilearn-test.com"])
 
 
 @app.route("/api/health/llm", methods=["GET"])
