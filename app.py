@@ -29,6 +29,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+logging.getLogger("httpx").setLevel(logging.DEBUG)
+logging.getLogger("openai").setLevel(logging.DEBUG)
+logging.getLogger("anthropic").setLevel(logging.DEBUG)
+
 from routes.auth_routes import auth_bp
 from routes.admin_routes import admin_bp
 from routes.whatsapp_route import whatsapp_bp
@@ -37,6 +41,9 @@ from routes.teacher_routes import teacher_bp
 from extensions import users, attendance_collection, bcrypt
 import jwt
 import base64
+
+
+
 
 try:
     # Prefer the face_detection module inside the face_detection/ folder
@@ -171,6 +178,15 @@ RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
 app = Flask(__name__)
 CORS(app)
 
+@app.before_request
+def log_request():
+    logger.info("→ %s %s | body=%s", request.method, request.path, 
+                str(request.get_data(as_text=True))[:200])
+
+@app.after_request  
+def log_response(response):
+    logger.info("← %s %s | status=%s", request.method, request.path, response.status_code)
+    return response
 
 @app.route("/api/health/llm", methods=["GET"])
 def health_llm():
