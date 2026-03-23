@@ -188,6 +188,15 @@ def log_response(response):
     logger.info("← %s %s | status=%s", request.method, request.path, response.status_code)
     return response
 
+@app.route('/debug-keys', methods=['GET'])
+def debug_keys():
+    return jsonify({
+        "openai_raw": repr(os.environ.get("OPENAI_API_KEY", "NOT SET")),
+        "anthropic_raw": repr(os.environ.get("ANTHROPIC_API_KEY", "NOT SET")),
+        "openai_len": len(os.environ.get("OPENAI_API_KEY", "")),
+        "anthropic_len": len(os.environ.get("ANTHROPIC_API_KEY", "")),
+    })
+
 @app.route("/api/health/llm", methods=["GET"])
 def health_llm():
     """Last OpenAI/Anthropic check results. Use ?refresh=1 to re-verify keys (calls provider APIs)."""
