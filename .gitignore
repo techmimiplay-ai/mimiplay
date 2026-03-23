@@ -7,9 +7,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Env
-*.env
-
 #cache
 __pycache__/
 
@@ -32,3 +29,4 @@ src/.env
 v e n v / 
  
  
+.env

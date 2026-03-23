@@ -1325,3 +1325,8 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(whatsapp_bp)
 app.register_blueprint(parent_bp)
 app.register_blueprint(teacher_bp)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, port=port, host='0.0.0.0')
