@@ -21,8 +21,12 @@ from datetime import datetime
 from bson import ObjectId
 from bson.json_util import dumps
 import logging
-
-logging.basicConfig(level=logging.INFO)
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,           # send to stdout, not stderr
+    force=True,
+)
 logger = logging.getLogger(__name__)
 
 from routes.auth_routes import auth_bp
