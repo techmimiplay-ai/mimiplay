@@ -17,3 +17,4 @@ opencv-python
 face_recognition
 SpeechRecognition
 pydub
+gunicorn
