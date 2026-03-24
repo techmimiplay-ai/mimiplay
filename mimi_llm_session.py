@@ -315,6 +315,8 @@ class MimiLLMSession:
         self.current_image = None
         self.current_video = None
         self.current_action = 'idle'  # idle | speaking | listening | showing
+        self.session_ended = False    # True when student session completes - frontend uses this
+        self.current_student = None   # current student name
         self._stop = False
         self._thread = None
 
@@ -340,17 +342,14 @@ class MimiLLMSession:
         if not api_key:
             return None
         system_instructions = (
-            "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. "
-            "Your goal is to educate and inform children in a simple, fun way.\n\n"
-            "TONE & LANGUAGE: Speak in English only. You may use maximum 1 Hindi word per response like ek or aur. Never full Hindi sentences. Use vocabulary a preschooler knows. "
-            "Keep responses to 1-2 short sentences. Never ask questions.\n\n"
-            "RULES & SAFETY: Never mention ghosts, monsters, death, violence, sickness, politics. "
-            "Always be encouraging and upbeat.\n\n"
-            "RESPONSE FORMAT: Reply ONLY with a JSON object. Keys: text, image_search_term, youtube_search_term.\n"
-            "- text: 1-2 short simple sentences in English only. Max 1-2 Hindi words allowed. No questions.\n"
-            "- image_search_term: short plain search phrase for Wikimedia (e.g. \"African bush elephant\"). Not a URL.\n"
-            "- youtube_search_term: short phrase to find a kid-friendly YouTube clip, or null.\n"
-            'Example: {"text": "An elephant is a very big animal!", "image_search_term": "African bush elephant", "youtube_search_term": null}'
+            "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. Your goal is to educate and inform children in a simple, fun way.\n\n"
+    "TONE & LANGUAGE: Speak in ENGLISH ONLY. No Hindi words at all. Use vocabulary a preschooler knows. Keep responses to 1-2 short sentences. Never ask questions.\n\n"
+    "RULES & SAFETY: Never mention ghosts, monsters, death, violence, sickness, politics, or adult topics. If asked about a scary topic, pivot to something happy. If child sounds sad, give gentle emotional support. Always be encouraging and upbeat.\n\n"
+    "RESPONSE FORMAT: Always reply with a JSON object only. Keys: text, image_search_term, youtube_search_term.\n"
+    "- text: 1-2 short simple sentences in English only. No Hindi words. No questions.\n"
+    "- image_search_term: A short search term to find a relevant image on Wikimedia Commons. Example: 'African elephant'\n"
+    "- youtube_search_term: A short search term to find a relevant nursery rhyme or educational video on YouTube. Example: 'elephant song for kids'. Use null if not needed.\n\n"
+    "Example: {\"text\": \"Elephant is a very big animal! It has a long trunk.\", \"image_search_term\": \"African elephant\", \"youtube_search_term\": \"elephant song for kids\"}"
         )
         user_message = (
             f'Transcribed speech from a child: "{prompt}"\n'
@@ -511,9 +510,17 @@ class MimiLLMSession:
             }
         search = data.get("image_search_term") or ""
         print("WIKIMEDIA SEARCH:", search)
-        image_url = self._fetch_wikimedia_image(search)
+        image_url = self._fetch_wikimedia_image(search) if search else None
         print("WIKIMEDIA RESULT:", image_url)
+
+        # YouTube: use search term from LLM to build a search URL
+        yt_search = data.get("youtube_search_term") or ""
         yt_video = None
+        if yt_search and yt_search.lower() not in ("null", "none", ""):
+            import urllib.parse
+            yt_video = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(yt_search + " for kids")
+            print("YOUTUBE SEARCH URL:", yt_video)
+
         return {
             "text": data.get("text") or "",
             "image_url": image_url,
@@ -536,6 +543,8 @@ class MimiLLMSession:
                             logger.info('Heard (wake loop): %s', heard)
                             if 'alexi' in heard or 'alexa' in heard or 'hey alexi' in heard:
                                 logger.info('Wake word detected — starting interactive session')
+                                self.session_ended = False  # reset for new student
+                                self.session_ended = False
                                 self._interactive_loop()
                                 # After interactive loop ends, continue waiting for next session
                         except Exception:
@@ -575,8 +584,12 @@ class MimiLLMSession:
             if any(term in lower for term in ['bye', 'thank you', 'ok mimi', 'ok thank you', 'ok mimi bye', 'stop mimi']):
                 self.current_action = 'speaking'
                 self.speech.speak_and_wait('Goodbye! See you soon. Take care!')
-                time.sleep(3)
+                time.sleep(1)
                 self.current_action = 'idle'
+                self.current_text = None
+                self.current_image = None
+                self.current_video = None
+                self.session_ended = True   # signal frontend: student done, move to next
                 return
 
             # If user says "play video" handle locally
@@ -598,13 +611,15 @@ class MimiLLMSession:
             self.current_image = llm_json.get('image_url')
             self.current_video = llm_json.get('yt_video')
 
-            # speak the text
+            # speak the text - don't listen while speaking
             if self.current_text:
+                self.current_action = 'speaking'
                 self.speech.speak_and_wait(self.current_text)
+                time.sleep(0.5)  # small pause after speaking before listening again
 
             # show result on screen for a short while
             self.current_action = 'showing'
-            time.sleep(4)
+            time.sleep(1)
 
     def process_text(self, user_text):
         """Processes a single text input from the frontend."""

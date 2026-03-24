@@ -1,3 +1,4 @@
+import face_recognition
 from flask import Flask, jsonify, request
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
@@ -277,17 +278,28 @@ def _parse_json(text: str) -> dict:
 
 
 def _build_prompt(word, child_said, activity_name, student_name):
-    return f"""You are a friendly AI teacher checking if a child said a word correctly.
+    return f"""You are a friendly AI teacher evaluating a preschool child's spoken answer.
+
 Activity: {activity_name}
-Target word: {word}
+Target word/answer: {word}
 Child said: "{child_said}"
 Child name: {student_name}
-Rules:
-- Accept minor pronunciation differences (e.g. "aipple" for "apple" is OK)
-- Accept if child said the word correctly even with extra words
-- Be encouraging
-Respond ONLY with valid JSON (no markdown):
-{{"correct": true/false, "feedback": "short encouraging message max 15 words", "hint": "optional hint if wrong"}}"""
+
+Evaluation rules:
+- CORRECT if child said the target word, even with extra words around it
+- CORRECT if pronunciation is close (e.g. "aipple"="apple", "elefant"="elephant", "bloo"="blue")
+- CORRECT if child said a valid synonym (e.g. "bunny"="rabbit", "auto"="car")
+- INCORRECT only if child said something completely different or said nothing meaningful
+- Score: 10 if correct on first try, 5 if partially correct, 0 if wrong
+- Be very encouraging and warm for a 3-5 year old child
+
+Respond ONLY with valid JSON, no markdown, no extra text:
+{{"correct": true/false, "score": 0/5/10, "feedback": "short warm encouraging message max 12 words", "hint": "simple one-word hint if wrong, else empty string"}}
+
+Examples:
+- word="cat", child_said="I see a cat" -> {{"correct": true, "score": 10, "feedback": "Amazing! You said cat perfectly!", "hint": ""}}
+- word="elephant", child_said="elefant" -> {{"correct": true, "score": 10, "feedback": "Wonderful! That is an elephant!", "hint": ""}}
+- word="blue", child_said="I don't know" -> {{"correct": false, "score": 0, "feedback": "Good try! Let's try again!", "hint": "blue"}}"""
 
 # =============================================================================
 # ACTIVITY RESULTS FILE HELPERS
@@ -711,13 +723,30 @@ def start_mimi_session():
 @app.route('/mimi-get', methods=['GET'])
 def mimi_get():
     try:
+        text = getattr(mimi_system, 'current_text', None)
+        image = getattr(mimi_system, 'current_image', None)
+        video = getattr(mimi_system, 'current_video', None)
+        action = getattr(mimi_system, 'current_action', 'idle')
+
+        # Don't show 'Thinking...' placeholder as a real answer
+        if text == 'Thinking...':
+            text = None
+
+        # Don't send image_url if it's empty/None - frontend should hide image widget
+        if not image:
+            image = None
+
+        # Don't send yt_video if None
+        if not video:
+            video = None
+
         resp = {
-            'text': getattr(mimi_system, 'current_text', None),
-            'image_url': getattr(mimi_system, 'current_image', None),
-            'yt_video': getattr(mimi_system, 'current_video', None),
-            # 'image_url': getattr(mimi_system, 'image_url', None),  # <-- 'current_image' ko 'image_url' kiya
-            # 'yt_video': getattr(mimi_system, 'yt_video', None),    # <-- 'current_video' ko 'yt_video' kiya
-            'action': getattr(mimi_system, 'current_action', 'idle')
+            'text': text,
+            'image_url': image,
+            'yt_video': video,
+            'action': action,
+            'has_response': bool(text and action not in ('idle', 'listening', 'thinking')),
+            'session_ended': getattr(mimi_system, 'session_ended', False)  # frontend: move to next student
         }
         return jsonify(resp)
     except Exception as e:
