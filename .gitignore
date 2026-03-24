@@ -7,15 +7,24 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-#cache
-__pycache__/
+# Env
+*.env
+src/.env
 
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+
+# Node
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -24,9 +33,4 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
-src/.env
-v e n v / 
- 
- 
-.env
+*.sw? 

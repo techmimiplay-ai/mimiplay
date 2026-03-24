@@ -1,3 +1,4 @@
+import face_recognition
 from flask import Flask, jsonify, request
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
@@ -315,17 +316,28 @@ def _parse_json(text: str) -> dict:
 
 
 def _build_prompt(word, child_said, activity_name, student_name):
-    return f"""You are a friendly AI teacher checking if a child said a word correctly.
+    return f"""You are a friendly AI teacher evaluating a preschool child's spoken answer.
+
 Activity: {activity_name}
-Target word: {word}
+Target word/answer: {word}
 Child said: "{child_said}"
 Child name: {student_name}
-Rules:
-- Accept minor pronunciation differences (e.g. "aipple" for "apple" is OK)
-- Accept if child said the word correctly even with extra words
-- Be encouraging
-Respond ONLY with valid JSON (no markdown):
-{{"correct": true/false, "feedback": "short encouraging message max 15 words", "hint": "optional hint if wrong"}}"""
+
+Evaluation rules:
+- CORRECT if child said the target word, even with extra words around it
+- CORRECT if pronunciation is close (e.g. "aipple"="apple", "elefant"="elephant", "bloo"="blue")
+- CORRECT if child said a valid synonym (e.g. "bunny"="rabbit", "auto"="car")
+- INCORRECT only if child said something completely different or said nothing meaningful
+- Score: 10 if correct on first try, 5 if partially correct, 0 if wrong
+- Be very encouraging and warm for a 3-5 year old child
+
+Respond ONLY with valid JSON, no markdown, no extra text:
+{{"correct": true/false, "score": 0/5/10, "feedback": "short warm encouraging message max 12 words", "hint": "simple one-word hint if wrong, else empty string"}}
+
+Examples:
+- word="cat", child_said="I see a cat" -> {{"correct": true, "score": 10, "feedback": "Amazing! You said cat perfectly!", "hint": ""}}
+- word="elephant", child_said="elefant" -> {{"correct": true, "score": 10, "feedback": "Wonderful! That is an elephant!", "hint": ""}}
+- word="blue", child_said="I don't know" -> {{"correct": false, "score": 0, "feedback": "Good try! Let's try again!", "hint": "blue"}}"""
 
 # =============================================================================
 # ACTIVITY RESULTS FILE HELPERS
@@ -745,49 +757,44 @@ def start_mimi_session():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
 @app.route('/mimi-get', methods=['GET'])
 def mimi_get():
-    """Returns the current state of MimiLLMSession including cached audio."""
     try:
-        current_text = getattr(mimi_system, 'current_text', None)
+        text = getattr(mimi_system, 'current_text', None)
+        image = getattr(mimi_system, 'current_image', None)
+        video = getattr(mimi_system, 'current_video', None)
+        action = getattr(mimi_system, 'current_action', 'idle')
+
+        if text == 'Thinking...':
+            text = None
+
+        if not image:
+            image = None
+
+        if not video:
+            video = None
+
         resp = {
-            'text': current_text,
-            'image_url': getattr(mimi_system, 'current_image', None),
-            'yt_video': getattr(mimi_system, 'current_video', None),
-            'action': getattr(mimi_system, 'current_action', 'idle')
+            'text': text,
+            'image_url': image,
+            'yt_video': video,
+            'action': action,
+            'has_response': bool(text and action not in ('idle', 'listening', 'thinking')),
+            'session_ended': getattr(mimi_system, 'session_ended', False)
         }
-        
+
         # Audio Caching Logic
-        if current_text and current_text != "Thinking...":
-            if getattr(mimi_system, 'current_audio_text', None) != current_text:
-                mimi_system.current_audio = _generate_tts_audio_base64(current_text)
-                mimi_system.current_audio_text = current_text
+        if text:
+            if getattr(mimi_system, 'current_audio_text', None) != text:
+                mimi_system.current_audio = _generate_tts_audio_base64(text)
+                mimi_system.current_audio_text = text
             resp["audio"] = getattr(mimi_system, 'current_audio', None)
-            
+
         return jsonify(resp)
+
     except Exception as e:
         logger.error("Error in mimi_get: %s", e)
         return jsonify({'error': str(e)}), 500
-
-
-@app.route('/mimi-chat', methods=['POST'])
-def mimi_chat():
-    try:
-        data = request.get_json() or {}
-        text = data.get("text", "")
-        if not text:
-            return jsonify({"status": "error", "message": "No text provided"}), 400
-            
-        result = mimi_system.process_text(text)
-        if result and result.get("text"):
-            mimi_system.current_audio = _generate_tts_audio_base64(result["text"])
-            mimi_system.current_audio_text = result["text"]
-            result["audio"] = mimi_system.current_audio
-        return jsonify({"status": "success", "data": result})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 
 @app.route('/mimi-wake', methods=['POST'])
 def mimi_wake():
