@@ -3,6 +3,7 @@ from datetime import datetime
 import jwt
 from config import SECRET
 from extensions import users, bcrypt
+from functools import wraps
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -62,3 +63,27 @@ def login():
         "role": user["role"],
         "user_id": str(user["_id"]) # Ye line miss thi!
     })
+
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+
+        if not token:
+            return jsonify({'status': 'error', 'message': 'Token is missing!'}), 401
+
+        try:
+            jwt.decode(token, SECRET, algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            return jsonify({'status': 'error', 'message': 'Token has expired!'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'status': 'error', 'message': 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+    return decorated

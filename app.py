@@ -1287,7 +1287,7 @@ def process_frame():
             best_idx = int(np.argmin(distances))
             distance = distances[best_idx]
             
-            if distance < 0.55:
+            if distance < 0.45:
                 name = known_names[best_idx].replace('_', ' ').title()
                 print(f"[ProcessFrame] Recognized: {name} ({distance:.3f})")
                 return jsonify({'person': name, 'status': 'recognised'})
