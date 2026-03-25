@@ -3,7 +3,8 @@ from pymongo import MongoClient
 import os
 from bson import ObjectId
 from datetime import datetime, timedelta
-from routes.auth_routes import token_required
+# from routes.auth_routes import token_required
+from routes.auth_routes import token_required, teacher_required
 
 teacher_bp = Blueprint('teacher_bp', __name__)
 
@@ -11,7 +12,8 @@ teacher_bp = Blueprint('teacher_bp', __name__)
 # GET /api/teacher/dashboard-stats
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/dashboard-stats', methods=['GET'])
-@token_required
+# @token_required
+@teacher_required
 def get_teacher_dashboard_stats():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -73,7 +75,8 @@ def get_teacher_dashboard_stats():
 # GET /api/teacher/attendance?date=YYYY-MM-DD
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/attendance', methods=['GET'])
-@token_required
+# @token_required
+@teacher_required
 def get_attendance_by_date():
     try:
         date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
@@ -109,7 +112,8 @@ def get_attendance_by_date():
 # POST /api/teacher/attendance/update
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/attendance/update', methods=['POST'])
-@token_required
+# @token_required
+@teacher_required
 def update_attendance_manual():
     try:
         data       = request.get_json() or {}
@@ -162,7 +166,8 @@ def update_attendance_manual():
 # GET /api/admin/all-students-with-stats
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/admin/all-students-with-stats', methods=['GET'])
-@token_required
+# @token_required
+@teacher_required
 def get_all_students_with_stats():
     try:
         db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
@@ -224,7 +229,8 @@ def get_all_students_with_stats():
 # GET /api/teacher/profile
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/profile', methods=['GET'])
-@token_required
+# @token_required
+@teacher_required
 def get_teacher_profile():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -257,7 +263,8 @@ def get_teacher_profile():
 # PUT /api/teacher/profile
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/profile', methods=['PUT'])
-@token_required
+# @token_required
+@teacher_required
 def update_teacher_profile():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -295,7 +302,8 @@ def update_teacher_profile():
 # PUT /api/teacher/change-password
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/change-password', methods=['PUT'])
-@token_required
+# @token_required
+@teacher_required
 def change_teacher_password():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -339,7 +347,8 @@ def change_teacher_password():
 # GET /api/teacher/reports
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/reports', methods=['GET'])
-@token_required
+# @token_required
+@teacher_required
 def get_teacher_reports():
     try:
         start_date = request.args.get('start_date', (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d"))

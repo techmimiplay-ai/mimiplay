@@ -87,3 +87,54 @@ def token_required(f):
 
         return f(*args, **kwargs)
     return decorated
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+
+        if not token:
+            return jsonify({'status': 'error', 'message': 'Token is missing!'}), 401
+
+        try:
+            data = jwt.decode(token, SECRET, algorithms=['HS256'])
+            if data.get('role') != 'admin':        # ← Role check
+                return jsonify({'status': 'error', 'message': 'Admin access only!'}), 403
+        except jwt.ExpiredSignatureError:
+            return jsonify({'status': 'error', 'message': 'Token has expired!'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'status': 'error', 'message': 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+    return decorated
+
+
+def teacher_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+
+        if not token:
+            return jsonify({'status': 'error', 'message': 'Token is missing!'}), 401
+
+        try:
+            data = jwt.decode(token, SECRET, algorithms=['HS256'])
+            if data.get('role') not in ['admin', 'teacher']:   # ← admin bhi teacher pages dekh sake
+                return jsonify({'status': 'error', 'message': 'Teacher access only!'}), 403
+        except jwt.ExpiredSignatureError:
+            return jsonify({'status': 'error', 'message': 'Token has expired!'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'status': 'error', 'message': 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+    return decorated
