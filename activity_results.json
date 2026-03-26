@@ -2,11 +2,11 @@
   {
     "student_name": "Vini",
     "student_id": "69aa90eb1ea42ce8211b9274",
-    "activity_id": 1,
-    "activity_name": "Alphabet Practice",
-    "stars": 0,
-    "score": 0,
-    "timestamp": "2026-03-25T23:15:11.321243",
-    "date": "2026-03-25",
-    "time": "23:15:11",
+    "activity_id": 3,
+    "activity_name": "Fruits Recognition",
+    "stars": 3,
+    "score": 83,
+    "timestamp": "2026-03-26T13:14:11.059164",
+    "date": "2026-03-26",
+    "time": "13:14:11",
     "_id": 
