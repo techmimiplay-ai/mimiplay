@@ -35,7 +35,7 @@ from routes.admin_routes import admin_bp
 from routes.whatsapp_route import whatsapp_bp
 from routes.parent_routes import parent_bp
 from routes.teacher_routes import teacher_bp
-from extensions import users, attendance_collection, bcrypt
+from extensions import users, attendance_collection, bcrypt, mimi_chats
 import jwt
 import base64
 
@@ -747,8 +747,27 @@ def get_status():
         })
 
 
-@app.route('/start-mimi-session', methods=['GET'])
+@app.route('/start-mimi-session', methods=['GET', 'POST'])
 def start_mimi_session():
+    student_name = request.args.get('student_name', '') or (request.get_json() or {}).get('student_name', '')
+    session_id   = request.args.get('session_id', '')   or (request.get_json() or {}).get('session_id', '')
+    
+    mimi_system.student_name = student_name   # ← YE ADD KARO
+    mimi_system.session_id   = session_id     # ← YE ADD KARO
+    
+     # ── Student ID dhundho MongoDB se ──────────────────────────
+    try:
+        from extensions import students as students_col
+        student_doc = students_col.find_one(
+            {"name": {"$regex": f"^{student_name}$", "$options": "i"}}
+        )
+        mimi_system.student_id = student_doc["_id"] if student_doc else None
+        logger.info(f"Student ID found: {mimi_system.student_id}")
+    except Exception as e:
+        mimi_system.student_id = None
+        logger.warning(f"Could not find student_id: {e}")
+    # ────────────────────────────────────────────────────────────
+    logger.info(f"Mimi session started for: {student_name} | session: {session_id}")
     try:
         thread = threading.Thread(target=mimi_system.start)
         thread.daemon = True
@@ -1349,7 +1368,7 @@ def process_frame():
             best_idx = int(np.argmin(distances))
             distance = distances[best_idx]
             
-            if distance < 0.55:
+            if distance < 0.6:#
                 name = known_names[best_idx].replace('_', ' ').title()
                 print(f"[ProcessFrame] Recognized: {name} ({distance:.3f})")
                 return jsonify({'person': name, 'status': 'recognised'})
@@ -1360,6 +1379,87 @@ def process_frame():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/mimi-save-chat', methods=['POST'])
+def mimi_save_chat():
+    """
+    Har ek Q&A ke baad call hota hai.
+    Body: { student_name, student_id, session_id, question, answer, image_url, child_photo_base64 }
+    """
+    try:
+        data         = request.get_json() or {}
+        student_name = data.get("student_name", "Unknown")
+        student_id   = data.get("student_id",   "")
+        session_id   = data.get("session_id",   "")
+        question     = data.get("question",     "")
+        answer       = data.get("answer",       "")
+        image_url    = data.get("image_url",    "")
+        # child_photo  = data.get("child_photo_base64", None)  # base64 string
+
+        now     = datetime.now()
+        today   = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%I:%M %p")
+
+        # Student DB se dhundho
+        from extensions import students as students_col
+        try:
+            student_doc = students_col.find_one({"name": {"$regex": f"^{student_name}$", "$options": "i"}})
+            if student_doc and not student_id:
+                student_id = str(student_doc["_id"])
+        except Exception:
+            pass
+
+        # Ek message object banao
+        message_obj = {
+            "question":   question,
+            "answer":     answer,
+            "image_url":  image_url,
+            # "child_photo": child_photo,   # base64 ya None
+            "time":       time_str,
+        }
+
+        # Existing session dhundho ya naya banao
+        existing = mimi_chats.find_one({
+            "session_id":   session_id,
+            "student_name": student_name
+        })
+
+        if existing:
+            # Session exist karta hai — message push karo
+            mimi_chats.update_one(
+                {"_id": existing["_id"]},
+                {
+                    "$push": {"messages": message_obj},
+                    "$set":  {"updated_at": now.isoformat()},
+                    "$inc":  {"total_msgs": 1}
+                }
+            )
+            logger.info(f"[mimi-save-chat] Updated session {session_id} for {student_name}")
+        else:
+            # Naya session banao
+            try:
+                sid_oid = ObjectId(student_id) if student_id else None
+            except Exception:
+                sid_oid = None
+
+            mimi_chats.insert_one({
+                "student_id":   sid_oid,
+                "student_name": student_name,
+                "session_id":   session_id,
+                "messages":     [message_obj],
+                "date":         today,
+                "started_at":   now.isoformat(),
+                "updated_at":   now.isoformat(),
+                "total_msgs":   1
+            })
+            logger.info(f"[mimi-save-chat] New session created for {student_name}")
+
+        return jsonify({"status": "success"})
+
+    except Exception as e:
+        logger.error(f"[mimi-save-chat] ERROR: {e}")
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
       
 
 app.register_blueprint(auth_bp)

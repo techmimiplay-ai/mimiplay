@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify
 # from services.whatsapp_service import send_daily_reports
 from services.whatsapp_service import send_test_message
+from routes.auth_routes import token_required
 
 whatsapp_bp = Blueprint("whatsapp", __name__)
 
@@ -9,6 +10,7 @@ whatsapp_bp = Blueprint("whatsapp", __name__)
 # MANUAL TRIGGER API
 # ================================
 @whatsapp_bp.route("/api/send-daily-whatsapp", methods=["GET"])
+@token_required
 def trigger_daily_whatsapp():
     try:
         result = send_daily_reports()
@@ -20,6 +22,7 @@ def trigger_daily_whatsapp():
         return jsonify({"status": "error", "msg": str(e)}), 500
 
 @whatsapp_bp.route("/api/test-whatsapp", methods=["GET"])
+@token_required
 def test_whatsapp():
     result = send_test_message()
     return jsonify(result)
