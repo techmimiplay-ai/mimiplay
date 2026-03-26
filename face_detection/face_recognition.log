@@ -14495,3 +14495,182 @@ Jungle mein hai sabse nyara!
 2026-03-26 13:10:04,132 - INFO - SpeechManager ready
 2026-03-26 13:10:04,245 - INFO - Calibrating microphone…
 2026-03-26 13:10:05,270 - INFO - SpeechRecognizer ready
+2026-03-26 13:49:46,149 - INFO - SpeechManager ready
+2026-03-26 13:49:46,972 - INFO - Calibrating microphone…
+2026-03-26 13:49:48,023 - INFO - SpeechRecognizer ready
+2026-03-26 13:49:48,026 - INFO - ============================================================
+2026-03-26 13:49:48,027 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-26 13:49:48,027 - INFO - ============================================================
+2026-03-26 13:49:49,712 - INFO - Loaded: Dron
+2026-03-26 13:49:50,848 - INFO - Loaded: ghanisht
+2026-03-26 13:49:52,641 - INFO - Loaded: Nishit
+2026-03-26 13:49:54,624 - INFO - Loaded: Rahil
+2026-03-26 13:49:56,011 - INFO - Loaded: Shikha
+2026-03-26 13:49:57,003 - INFO - Loaded: Tushar
+2026-03-26 13:50:00,023 - INFO - Loaded: vini
+2026-03-26 13:50:02,337 - INFO - Loaded: vini
+2026-03-26 13:50:02,338 - INFO - Known people (8): Dron, ghanisht, Nishit, Rahil, Shikha, Tushar, vini, vini
+2026-03-26 13:50:02,340 - INFO - SpeechManager ready
+2026-03-26 13:50:02,523 - INFO - Calibrating microphone…
+2026-03-26 13:50:03,582 - INFO - SpeechRecognizer ready
+2026-03-26 13:54:33,880 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-03-26 13:54:41,498 - INFO - DONE SPEAKING
+2026-03-26 13:54:41,498 - INFO - LISTENING… (energy threshold: 464)
+2026-03-26 13:54:46,029 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:54:46,688 - INFO - HEARD: 'what's the colour of sun'
+2026-03-26 13:54:50,623 - INFO - SPEAKING: The sun is bright yellow and orange! Wo bahut sundar hai!
+2026-03-26 13:54:59,928 - INFO - DONE SPEAKING
+2026-03-26 13:55:03,930 - INFO - LISTENING… (energy threshold: 464)
+2026-03-26 13:55:05,795 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:55:06,429 - INFO - HEARD: 'colour of moon'
+2026-03-26 13:55:09,886 - INFO - SPEAKING: The moon is usually a bright white or silver color, but sometimes it can look orange or yellow! Yeh bahut sundar hai!
+2026-03-26 13:55:23,742 - INFO - DONE SPEAKING
+2026-03-26 13:55:27,743 - INFO - LISTENING… (energy threshold: 464)
+2026-03-26 13:55:31,200 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:55:31,874 - INFO - HEARD: 'tell me about elephant'
+2026-03-26 13:55:36,368 - INFO - SPEAKING: An elephant is a huge and gentle animal! They have big ears and a long trunk, ek unique feature!
+2026-03-26 13:55:50,061 - INFO - DONE SPEAKING
+2026-03-26 13:55:54,063 - INFO - LISTENING… (energy threshold: 464)
+2026-03-26 13:55:57,081 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:55:57,786 - INFO - HEARD: 'tell me about lion'
+2026-03-26 13:56:03,811 - INFO - SPEAKING: A lion is a strong and brave animal! It is called the king of the jungle, ek bahut bada cat hai!
+2026-03-26 13:56:17,884 - INFO - DONE SPEAKING
+2026-03-26 13:56:21,885 - INFO - LISTENING… (energy threshold: 464)
+2026-03-26 13:56:29,894 - WARNING - LISTEN TIMEOUT (attempt 1/3)
+2026-03-26 13:56:29,895 - INFO - LISTENING… (energy threshold: 464)
+2026-03-26 13:56:37,566 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:56:38,279 - WARNING - COULD NOT UNDERSTAND (attempt 2/3)
+2026-03-26 13:56:38,279 - INFO - LISTENING… (energy threshold: 306)
+2026-03-26 13:56:43,074 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:56:43,982 - WARNING - COULD NOT UNDERSTAND (attempt 3/3)
+2026-03-26 13:56:43,983 - INFO - SPEAKING: I didn't hear you. Can you say that again?
+2026-03-26 13:56:50,347 - INFO - DONE SPEAKING
+2026-03-26 13:56:50,347 - INFO - LISTENING… (energy threshold: 273)
+2026-03-26 13:56:52,859 - INFO - Audio captured — sending to Google STT…
+2026-03-26 13:56:53,488 - WARNING - COULD NOT UNDERSTAND (attempt 1/3)
+2026-03-26 13:56:53,488 - INFO - LISTENING… (energy threshold: 273)
+2026-03-26 15:45:05,729 - INFO - SpeechManager ready
+2026-03-26 15:45:07,188 - INFO - Calibrating microphone…
+2026-03-26 15:45:08,272 - INFO - SpeechRecognizer ready
+2026-03-26 15:45:08,272 - INFO - ============================================================
+2026-03-26 15:45:08,273 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-26 15:45:08,274 - INFO - ============================================================
+2026-03-26 15:45:10,352 - INFO - Loaded: Dron
+2026-03-26 15:45:12,200 - INFO - Loaded: ghanisht
+2026-03-26 15:45:14,441 - INFO - Loaded: Nishit
+2026-03-26 15:45:16,520 - INFO - Loaded: Rahil
+2026-03-26 15:45:18,030 - INFO - Loaded: Shikha
+2026-03-26 15:45:19,123 - INFO - Loaded: Tushar
+2026-03-26 15:45:21,451 - INFO - Loaded: vini
+2026-03-26 15:45:23,155 - INFO - Loaded: vini
+2026-03-26 15:45:23,156 - INFO - Known people (8): Dron, ghanisht, Nishit, Rahil, Shikha, Tushar, vini, vini
+2026-03-26 15:45:23,159 - INFO - SpeechManager ready
+2026-03-26 15:45:23,292 - INFO - Calibrating microphone…
+2026-03-26 15:45:24,342 - INFO - SpeechRecognizer ready
+2026-03-26 15:45:40,094 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-03-26 15:45:47,870 - INFO - DONE SPEAKING
+2026-03-26 15:45:47,871 - INFO - LISTENING… (energy threshold: 701)
+2026-03-26 15:45:52,044 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:45:56,072 - INFO - HEARD: 'what's the colour of sun'
+2026-03-26 15:46:00,833 - INFO - SPEAKING: The sun is a bright yellow color, just like a tasty mango! It makes everything warm and happy, ek dum!
+2026-03-26 15:46:15,697 - INFO - DONE SPEAKING
+2026-03-26 15:46:19,698 - INFO - LISTENING… (energy threshold: 701)
+2026-03-26 15:46:23,223 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:46:24,070 - INFO - HEARD: 'what's the colour of moon'
+2026-03-26 15:46:29,135 - INFO - SPEAKING: The moon looks white and sometimes a little yellow or orange, ek beautiful sight!
+2026-03-26 15:46:39,641 - INFO - DONE SPEAKING
+2026-03-26 15:46:43,644 - INFO - LISTENING… (energy threshold: 701)
+2026-03-26 15:46:46,661 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:46:47,371 - INFO - HEARD: 'tell me about lion'
+2026-03-26 15:46:52,061 - INFO - SPEAKING: A lion is a big and strong animal! It is called the 'king of the jungle' because it is very brave aur powerful.
+2026-03-26 15:47:05,900 - INFO - DONE SPEAKING
+2026-03-26 15:47:09,901 - INFO - LISTENING… (energy threshold: 701)
+2026-03-26 15:50:47,859 - INFO - SpeechManager ready
+2026-03-26 15:50:48,191 - INFO - Calibrating microphone…
+2026-03-26 15:50:49,219 - INFO - SpeechRecognizer ready
+2026-03-26 15:50:49,220 - INFO - ============================================================
+2026-03-26 15:50:49,221 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-26 15:50:49,222 - INFO - ============================================================
+2026-03-26 15:50:51,144 - INFO - Loaded: Dron
+2026-03-26 15:50:52,959 - INFO - Loaded: ghanisht
+2026-03-26 15:50:55,134 - INFO - Loaded: Nishit
+2026-03-26 15:50:56,961 - INFO - Loaded: Rahil
+2026-03-26 15:50:58,494 - INFO - Loaded: Shikha
+2026-03-26 15:50:59,652 - INFO - Loaded: Tushar
+2026-03-26 15:51:02,201 - INFO - Loaded: vini
+2026-03-26 15:51:03,843 - INFO - Loaded: vini
+2026-03-26 15:51:03,845 - INFO - Known people (8): Dron, ghanisht, Nishit, Rahil, Shikha, Tushar, vini, vini
+2026-03-26 15:51:03,847 - INFO - SpeechManager ready
+2026-03-26 15:51:04,064 - INFO - Calibrating microphone…
+2026-03-26 15:51:05,124 - INFO - SpeechRecognizer ready
+2026-03-26 15:51:51,387 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-03-26 15:51:59,307 - INFO - DONE SPEAKING
+2026-03-26 15:51:59,307 - INFO - LISTENING… (energy threshold: 558)
+2026-03-26 15:52:05,254 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:52:15,825 - INFO - HEARD: 'what's the colour of sun'
+2026-03-26 15:52:20,485 - INFO - SPEAKING: The sun is a bright yellow color! It makes everything feel warm and happy, ek dam khush!
+2026-03-26 15:52:33,089 - INFO - DONE SPEAKING
+2026-03-26 15:52:37,090 - INFO - LISTENING… (energy threshold: 558)
+2026-03-26 15:52:47,135 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:52:48,718 - INFO - HEARD: 'what's the colour of moon'
+2026-03-26 15:52:52,772 - INFO - SPEAKING: The moon looks white or sometimes yellow, like ek big ball in the sky!
+2026-03-26 15:53:01,753 - INFO - DONE SPEAKING
+2026-03-26 15:53:05,755 - INFO - LISTENING… (energy threshold: 558)
+2026-03-26 15:53:09,282 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:53:13,478 - WARNING - COULD NOT UNDERSTAND (attempt 1/3)
+2026-03-26 15:53:13,479 - INFO - LISTENING… (energy threshold: 558)
+2026-03-26 15:53:18,936 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:53:20,296 - WARNING - COULD NOT UNDERSTAND (attempt 2/3)
+2026-03-26 15:53:20,297 - INFO - LISTENING… (energy threshold: 455)
+2026-03-26 15:53:24,842 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:53:26,422 - INFO - HEARD: 'tell me about elephant'
+2026-03-26 15:53:31,048 - INFO - SPEAKING: An elephant is the largest land animal! They have big ears and a long trunk, ek amazing animal!
+2026-03-26 15:53:45,066 - INFO - DONE SPEAKING
+2026-03-26 15:53:49,068 - INFO - LISTENING… (energy threshold: 493)
+2026-03-26 15:53:50,510 - INFO - Audio captured — sending to Google STT…
+2026-03-26 15:53:50,992 - WARNING - COULD NOT UNDERSTAND (attempt 1/3)
+2026-03-26 15:53:50,992 - INFO - LISTENING… (energy threshold: 493)
+2026-03-26 16:16:47,386 - INFO - SpeechManager ready
+2026-03-26 16:16:47,706 - INFO - Calibrating microphone…
+2026-03-26 16:16:48,836 - INFO - SpeechRecognizer ready
+2026-03-26 16:16:48,840 - INFO - ============================================================
+2026-03-26 16:16:48,842 - INFO - FACE RECOGNITION ATTENDANCE SYSTEM
+2026-03-26 16:16:48,854 - INFO - ============================================================
+2026-03-26 16:16:51,812 - INFO - Loaded: Dron
+2026-03-26 16:16:54,116 - INFO - Loaded: ghanisht
+2026-03-26 16:16:56,302 - INFO - Loaded: Nishit
+2026-03-26 16:16:58,153 - INFO - Loaded: Rahil
+2026-03-26 16:16:59,992 - INFO - Loaded: Shikha
+2026-03-26 16:17:01,322 - INFO - Loaded: Tushar
+2026-03-26 16:17:03,718 - INFO - Loaded: vini
+2026-03-26 16:17:05,632 - INFO - Loaded: vini
+2026-03-26 16:17:05,633 - INFO - Known people (8): Dron, ghanisht, Nishit, Rahil, Shikha, Tushar, vini, vini
+2026-03-26 16:17:05,635 - INFO - SpeechManager ready
+2026-03-26 16:17:05,780 - INFO - Calibrating microphone…
+2026-03-26 16:17:06,806 - INFO - SpeechRecognizer ready
+2026-03-26 16:17:23,985 - INFO - SPEAKING: Yes! I'm here. You can ask me anything.
+2026-03-26 16:17:31,884 - INFO - DONE SPEAKING
+2026-03-26 16:17:31,885 - INFO - LISTENING… (energy threshold: 504)
+2026-03-26 16:17:35,370 - INFO - Audio captured — sending to Google STT…
+2026-03-26 16:17:36,645 - INFO - HEARD: 'what's the colour of sun'
+2026-03-26 16:17:41,951 - INFO - SPEAKING: The sun is a bright yellow color, just like ek lemon!
+2026-03-26 16:17:51,010 - INFO - DONE SPEAKING
+2026-03-26 16:17:55,012 - INFO - LISTENING… (energy threshold: 504)
+2026-03-26 16:18:00,476 - INFO - Audio captured — sending to Google STT…
+2026-03-26 16:18:01,394 - WARNING - COULD NOT UNDERSTAND (attempt 1/3)
+2026-03-26 16:18:01,396 - INFO - LISTENING… (energy threshold: 504)
+2026-03-26 16:18:04,431 - INFO - Audio captured — sending to Google STT…
+2026-03-26 16:18:05,120 - INFO - HEARD: 'what's the colour of moon'
+2026-03-26 16:18:10,222 - INFO - SPEAKING: The moon looks white or grey, like ek shiny ball in the sky!
+2026-03-26 16:18:20,081 - INFO - DONE SPEAKING
+2026-03-26 16:18:24,083 - INFO - LISTENING… (energy threshold: 520)
+2026-03-26 16:18:27,357 - INFO - Audio captured — sending to Google STT…
+2026-03-26 16:18:33,326 - INFO - HEARD: 'tell me about lion'
+2026-03-26 16:18:39,394 - INFO - SPEAKING: A lion is a strong and big animal! They live in a group called ek pride.
+2026-03-26 16:18:50,854 - INFO - DONE SPEAKING
+2026-03-26 16:18:54,861 - INFO - LISTENING… (energy threshold: 520)
+2026-03-26 16:18:58,969 - INFO - Audio captured — sending to Google STT…
+2026-03-26 16:18:59,763 - INFO - HEARD: 'tell me about tiger'
+2026-03-26 16:19:05,313 - INFO - SPEAKING: Tigers are big, beautiful cats with orange fur and black stripes! They are very strong and love to play in the jungle, ek jungle mein.
+2026-03-26 16:19:22,650 - INFO - DONE SPEAKING
+2026-03-26 16:19:26,651 - INFO - LISTENING… (energy threshold: 520)

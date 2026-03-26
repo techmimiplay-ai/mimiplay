@@ -258,6 +258,8 @@ import json
 import threading
 import requests
 import logging
+from extensions import mimi_chats
+from datetime import datetime
 
 try:
     from face_detection.face_detection import SpeechManager, SpeechRecognizer
@@ -317,6 +319,9 @@ class MimiLLMSession:
         self.current_action = 'idle'  # idle | speaking | listening | showing
         self._stop = False
         self._thread = None
+        self.student_name = ""   # ← YE ADD KARO
+        self.session_id   = ""
+        self.student_id   = None
 
         # Prefer explicit keys (e.g. from app.py); else environment
         self.openai_key = _normalize_api_key(
@@ -327,6 +332,7 @@ class MimiLLMSession:
             if anthropic_api_key is not None
             else os.environ.get("ANTHROPIC_API_KEY")
         )
+        
 
         logger.info(
             "MimiLLMSession ready (OpenAI:%s Anthropic:%s)",
@@ -598,6 +604,38 @@ class MimiLLMSession:
             self.current_image = llm_json.get('image_url')
             self.current_video = llm_json.get('yt_video')
 
+            # ── MongoDB mein save karo ──────────────────────────
+            try:
+                now = datetime.now()
+                mimi_chats.update_one(
+                    {
+                        "session_id":   self.session_id,
+                        "student_name": self.student_name
+                    },
+                    {
+                        "$push": {
+                            "messages": {
+                                "question":  user_text,
+                                "answer":    self.current_text or "",
+                                "image_url": self.current_image or "",
+                                "time":      now.strftime("%I:%M %p")
+                            }
+                        },
+                        "$setOnInsert": {
+                            "student_id": self.student_id,
+                            "date":       now.strftime("%Y-%m-%d"),
+                            "started_at": now.isoformat()
+                        },
+                        "$set": {"updated_at": now.isoformat()},
+                        "$inc": {"total_msgs": 1}
+                    },
+                    upsert=True
+                )
+                logger.info(f"[DB] Saved Q&A for '{self.student_name}': {user_text[:40]}")
+            except Exception as db_err:
+                logger.error(f"[DB] Save error: {db_err}")
+            # ────────────────────────────────────────────────────
+
             # speak the text
             if self.current_text:
                 self.speech.speak_and_wait(self.current_text)
@@ -606,24 +644,76 @@ class MimiLLMSession:
             self.current_action = 'showing'
             time.sleep(4)
 
+    # def process_text(self, user_text):
+    #     """Processes a single text input from the frontend."""
+    #     self.current_action = 'thinking'
+    #     self.current_text = 'Thinking...'
+        
+    #     try:
+    #         llm_json = self._get_llm_response_json(user_text)
+            
+    #         # update instance fields for polling
+    #         self.current_text = llm_json.get('text')
+    #         self.current_image = llm_json.get('image_url')
+    #         self.current_video = llm_json.get('yt_video')
+    #         self.current_action = 'speaking'
+            
+    #         return llm_json
+    #     except Exception as e:
+    #         logger.error("Error in process_text: %s", e)
+    #         return {"text": "Sorry, I encountered an error while thinking.", "error": str(e)}
     def process_text(self, user_text):
-        """Processes a single text input from the frontend."""
+    # """Processes a single text input from the frontend."""
         self.current_action = 'thinking'
         self.current_text = 'Thinking...'
-        
+
         try:
             llm_json = self._get_llm_response_json(user_text)
-            
+
             # update instance fields for polling
-            self.current_text = llm_json.get('text')
-            self.current_image = llm_json.get('image_url')
-            self.current_video = llm_json.get('yt_video')
+            self.current_text   = llm_json.get('text')
+            self.current_image  = llm_json.get('image_url')
+            self.current_video  = llm_json.get('yt_video')
             self.current_action = 'speaking'
-            
+
+            # ── MongoDB mein save karo (return se PEHLE) ──────────
+            try:
+                now = datetime.now()
+                mimi_chats.update_one(
+                    {
+                        "session_id":   self.session_id,
+                        "student_name": self.student_name
+                    },
+                    {
+                        "$push": {
+                            "messages": {
+                                "question":  user_text,
+                                "answer":    self.current_text or "",
+                                "image_url": self.current_image or "",
+                                "time":      now.strftime("%I:%M %p")
+                            }
+                        },
+                        "$setOnInsert": {
+                            "date":       now.strftime("%Y-%m-%d"),
+                            "started_at": now.isoformat()
+                        },
+                        "$set": {"updated_at": now.isoformat()},
+                        "$inc": {"total_msgs": 1}
+                    },
+                    upsert=True
+                )
+                logger.info(f"[DB] Saved Q&A for '{self.student_name}': {user_text[:40]}")
+            except Exception as db_err:
+                logger.error(f"[DB] Save error: {db_err}")
+            # ──────────────────────────────────────────────────────
+
             return llm_json
+
         except Exception as e:
             logger.error("Error in process_text: %s", e)
             return {"text": "Sorry, I encountered an error while thinking.", "error": str(e)}
+
+        
 
     def start(self):
         if self._thread and self._thread.is_alive():

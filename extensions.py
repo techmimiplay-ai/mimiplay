@@ -29,5 +29,6 @@ db                    = client["AlexiDB"]
 users                 = db["users"]
 attendance_collection = db["attendance"]
 students              = db["students"]
+mimi_chats = db["mimi_chats"]
 
 bcrypt = Bcrypt()
