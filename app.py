@@ -1066,8 +1066,11 @@ def save_activity_result():
         }
 
         # Save to MongoDB
-        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
-        db["activity_results"].insert_one(entry)
+        try:
+            MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))
+            db["activity_results"].insert_one(entry)
+        except Exception as e:
+            print("MongoDB not connected, skipping...", e)
 
         # Save to local JSON
         json_entry = {**entry, "id": int(datetime.now().timestamp() * 1000)}
@@ -1089,44 +1092,7 @@ def save_activity_result():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/save-activity-result', methods=['POST'])
-def save_activity_result():
-    try:
-        from datetime import datetime
-        from extensions import users  # ya jo bhi tumhara DB collection import hai
 
-        data = request.get_json() or {}
-
-        entry = {
-            "student_name":  data.get("student_name",  "Student"),
-            "student_id":    data.get("student_id",    "student-1"),
-            "activity_id":   data.get("activity_id",   0),
-            "activity_name": data.get("activity_name", "Activity"),
-            "stars":         min(5, max(0, int(data.get("stars",  0)))),
-            "score":         int(data.get("score", 0)),
-            "timestamp":     datetime.now().isoformat(),
-            "date":          datetime.now().strftime("%Y-%m-%d"),
-            "time":          datetime.now().strftime("%H:%M:%S"),
-        }
-
-        # ── 1. MongoDB mein save karo ──────────────────────────────
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
-        activity_collection = db["activity_results"]
-        activity_collection.insert_one(entry)
-
-        # ── 2. Local JSON file mein bhi rakho (backup) ─────────────
-        json_entry = {**entry, "id": int(datetime.now().timestamp() * 1000)}
-        results = load_results()
-        results.insert(0, json_entry)
-        save_results(results)
-
-        # MongoDB ka _id remove karo response se
-        entry.pop("_id", None)
-
-        return jsonify({"status": "success", "entry": entry})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/get-student-stars/<student_id>', methods=['GET'])
 def get_student_stars(student_id):
