@@ -1042,33 +1042,52 @@ def generate_activity_questions():
         return jsonify({"error": str(e)}), 500
 
 
-# @app.route('/save-activity-result', methods=['POST'])
-# def save_activity_result():
-#     """
-#     Save student activity result to local JSON file.
-#     Body: { student_id, student_name, activity_id, activity_name, stars, score }
-#     """
-#     try:
-#         from datetime import datetime
-#         data  = request.get_json() or {}
-#         entry = {
-#             "id":            int(datetime.now().timestamp() * 1000),
-#             "student_id":    data.get("student_id",    "student-1"),
-#             "student_name":  data.get("student_name",  "Student"),
-#             "activity_id":   data.get("activity_id",   0),
-#             "activity_name": data.get("activity_name", "Activity"),
-#             "stars":         min(5, max(0, int(data.get("stars",  0)))),
-#             "score":         int(data.get("score", 0)),
-#             "timestamp":     datetime.now().isoformat(),
-#             "date":          datetime.now().strftime("%a %b %d %Y"),
-#         }
-#         results = load_results()
-#         results.insert(0, entry)
-#         save_results(results)
-#         return jsonify({"status": "success", "entry": entry})
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
+@app.route('/save-activity-result', methods=['POST'])
+def save_activity_result():
+    try:
+        from datetime import datetime
+        data = request.get_json() or {}
 
+        student_name = data.get("student_name", "Student")
+        activity_name = data.get("activity_name", "Activity")
+        stars = min(5, max(0, int(data.get("stars", 0))))
+        score = int(data.get("score", 0))
+
+        entry = {
+            "student_name":  student_name,
+            "student_id":    data.get("student_id", "student-1"),
+            "activity_id":   data.get("activity_id", 0),
+            "activity_name": activity_name,
+            "stars":         stars,
+            "score":         score,
+            "timestamp":     datetime.now().isoformat(),
+            "date":          datetime.now().strftime("%Y-%m-%d"),
+            "time":          datetime.now().strftime("%H:%M:%S"),
+        }
+
+        # Save to MongoDB
+        db = MongoClient("mongodb://localhost:27017/")["AlexiDB"]
+        db["activity_results"].insert_one(entry)
+
+        # Save to local JSON
+        json_entry = {**entry, "id": int(datetime.now().timestamp() * 1000)}
+        results = load_results()
+        results.insert(0, json_entry)
+        save_results(results)
+
+        entry.pop("_id", None)
+
+        # Send WhatsApp to parent instantly
+        try:
+            from services.whatsapp_service import send_activity_result_to_parent
+            send_activity_result_to_parent(student_name, activity_name, stars, score)
+        except Exception as wp_err:
+            print(f"[WP] WhatsApp send failed: {wp_err}")
+
+        return jsonify({"status": "success", "entry": entry})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/save-activity-result', methods=['POST'])
 def save_activity_result():
