@@ -332,7 +332,7 @@ class MimiLLMSession:
             if anthropic_api_key is not None
             else os.environ.get("ANTHROPIC_API_KEY")
         )
-        
+        self.youtube_key = os.environ.get("YOUTUBE_API_KEY")
 
         logger.info(
             "MimiLLMSession ready (OpenAI:%s Anthropic:%s)",
@@ -493,6 +493,32 @@ class MimiLLMSession:
         except Exception as e:
             logger.warning('Failed to parse JSON from LLM response: %s', e)
         return None
+    
+    def _fetch_youtube_video_url(self, search_term):
+        api_key = self.youtube_key
+        if not api_key:
+            return None
+        try:
+            r = requests.get(
+                "https://www.googleapis.com/youtube/v3/search",
+                params={
+                    "part": "snippet",
+                    "q": search_term + " for kids",
+                    "type": "video",
+                    "safeSearch": "strict",
+                    "videoEmbeddable": "true",
+                    "maxResults": 1,
+                    "key": api_key,
+                },
+                timeout=10,
+            )
+            items = r.json().get("items", [])
+            if items:
+                video_id = items[0]["id"]["videoId"]
+                return f"https://www.youtube.com/embed/{video_id}"
+        except Exception as e:
+            print("YouTube API error:", e)
+        return None
 
     def _get_llm_response_json(self, user_text):
         text = None
@@ -519,7 +545,17 @@ class MimiLLMSession:
         print("WIKIMEDIA SEARCH:", search)
         image_url = self._fetch_wikimedia_image(search)
         print("WIKIMEDIA RESULT:", image_url)
+        yt_search = data.get("youtube_search_term") or ""
         yt_video = None
+        if yt_search and yt_search.lower() not in ("null", "none", ""):
+            import urllib.parse
+            # API key se try karo
+            yt_video = self._fetch_youtube_video_url(yt_search)
+            # API key nahi hai toh search URL banao (no key needed)
+            if not yt_video:
+                yt_video = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(yt_search + " for kids")
+            print("YOUTUBE URL:", yt_video)
+            print("YOUTUBE SEARCH URL:", yt_video)
         return {
             "text": data.get("text") or "",
             "image_url": image_url,
