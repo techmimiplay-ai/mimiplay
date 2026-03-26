@@ -9,16 +9,22 @@ lerna-debug.log*
 
 # Env
 *.env
+src/.env
 
-#cache
+# Python cache
 __pycache__/
+*.pyc
 
+# Virtual env
+venv/
+
+# Node
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -27,8 +33,4 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
-src/.env
-v e n v / 
- 
- 
+*.sw? 
