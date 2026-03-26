@@ -19,9 +19,6 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-
-
-
 try:
     import openai as _openai_sdk
 except ImportError:
@@ -59,14 +56,8 @@ class MimiLLMSession:
         self.student_id   = None
 
         # Prefer explicit keys (e.g. from app.py); else environment
-        self.openai_key = _normalize_api_key(
-            openai_api_key if openai_api_key is not None else os.environ.get("OPENAI_API_KEY")
-        )
-        self.anthropic_key = _normalize_api_key(
-            anthropic_api_key
-            if anthropic_api_key is not None
-            else os.environ.get("ANTHROPIC_API_KEY")
-        )
+        self.openai_key = openai_api_key if openai_api_key is not None else os.environ.get("OPENAI_API_KEY")
+        self.anthropic_key = anthropic_api_key if anthropic_api_key is not None else os.environ.get("ANTHROPIC_API_KEY")
         self.youtube_key = os.environ.get("YOUTUBE_API_KEY")
 
         logger.info(
