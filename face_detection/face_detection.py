@@ -1019,49 +1019,36 @@ class FaceRecognitionSystem:
                                     self.current_person = name
                                     self.current_action = 'talking'
 
-                                    url = "http://localhost:5000/check-attendance"
-
-                                    data = {
-                                        "student_name": name
-                                    }
-
-                                    response = requests.post(url, json=data)
+                                    url = os.getenv("BACKEND_URL", "http://localhost:5000") + "/check-attendance"
+                                    data = {"student_name": name}
+                                    response = requests.post(url, json=data, headers={"Authorization": f"Bearer {os.getenv('API_TOKEN')}"})
                                     result = response.json()
 
                                     if result.get("message") == "already_marked":
-                                        self.speech.speak_and_wait(
-                                            f'Hi {name}, your attendance is already marked today.')
-                                        continue
+                                        self.speech.speak_and_wait(f'Hi {name}, your attendance is already marked today.')
+                                        self.current_action = 'idle'    # ✅ reset
+                                        self.current_person = None      # ✅ reset
+                                        break                           # ✅ continue → break
 
                                     self.speech.speak_and_wait(f'Hi {name}! How are you today?')
                                     mood_text = self.mic.listen(timeout=8)
                                     mood = self.mood_engine.analyze(mood_text)
-                                    url = "http://localhost:5000/mark-attendance"
 
-                                    data = {
-                                        "student_name": name,
-                                        "mood": mood
-                                    }
-                                    response = requests.post(url, json=data)
-
+                                    url = os.getenv("BACKEND_URL", "http://localhost:5000") + "/mark-attendance"
+                                    data = {"student_name": name, "mood": mood}
+                                    response = requests.post(url, json=data, headers={"Authorization": f"Bearer {os.getenv('API_TOKEN')}"})
                                     result = response.json()
 
-
                                     self.current_mood = mood
-                                    # self.attendance.mark(name, mood)
                                     if result.get("message") == "already_marked":
                                         self.current_message = "already_marked"
-                                        self.speech.speak_and_wait(
-                                            f'{name}, your attendance is already marked today.')
+                                        self.speech.speak_and_wait(f'{name}, your attendance is already marked today.')
                                     else:
-                                        self.speech.speak_and_wait(
-                                            f'Great! Attendance marked. Have a wonderful day {name}!')
-                                    # self.speech.speak_and_wait(
-                                    #     f'Great! Attendance marked. Have a wonderful day {name}!')
+                                        self.speech.speak_and_wait(f'Great! Attendance marked. Have a wonderful day {name}!')
 
-                                    self.current_action = 'idle'
-                                    self.current_person = None
-                                    self.current_mood = None
+                                    self.current_action = 'idle'    # ✅ reset
+                                    self.current_person = None      # ✅ reset
+                                    self.current_mood = None        # ✅ reset
 
                         if cv2.waitKey(1) & 0xFF == ord('q'):
                             self.running = False
@@ -1146,3 +1133,6 @@ class FaceRecognitionSystem:
     #                     time.sleep(1)
 
                         
+
+
+

@@ -27,7 +27,7 @@ def send_whatsapp(number, message):
         client.messages.create(
             from_=TWILIO_NUMBER,
             body=message,
-            to=f'whatsapp:{+919601930581}'
+            to=f'whatsapp:{number}'
         )
         return True
     except Exception as e:
@@ -95,3 +95,46 @@ Alexi School AI
         })
 
     return results
+# ================================
+# ACTIVITY RESULT - INSTANT REPORT
+# ================================
+def send_activity_result_to_parent(student_name, activity_name, stars, score):
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        time_now = datetime.now().strftime("%H:%M")
+
+        # Find parent by child name
+        parent = users.find_one({
+            "role": "parent",
+            "child_name": {"$regex": f"^{student_name}$", "$options": "i"}
+        })
+
+        if not parent:
+            print(f"[WP] No parent found for student: {student_name}")
+            return False
+
+        parent_number = parent.get("phone")
+        if not parent_number:
+            print(f"[WP] No phone number for parent of: {student_name}")
+            return False
+
+        stars_emoji = "⭐" * int(stars)
+        msg = f"""🎓 *Alexi Activity Report*
+
+👦 Student: {student_name}
+📚 Activity: {activity_name}
+⭐ Stars: {stars_emoji} ({stars}/5)
+🏆 Score: {score}
+📅 Date: {today}
+🕐 Time: {time_now}
+
+Keep learning! 🚀
+*Alexi Smart Learning*"""
+
+        result = send_whatsapp(parent_number, msg)
+        print(f"[WP] Report sent to {parent_number}: {result}")
+        return result
+
+    except Exception as e:
+        print(f"[WP] Error sending activity result: {e}")
+        return False
