@@ -241,7 +241,7 @@ class MimiLLMSession:
             items = r.json().get("items", [])
             if items:
                 video_id = items[0]["id"]["videoId"]
-                return f"https://www.youtube.com/embed/{video_id}"
+                return f"https://www.youtube.com/watch?v={video_id}"
         except Exception as e:
             print("YouTube API error:", e)
         return None
