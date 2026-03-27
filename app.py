@@ -13,6 +13,22 @@ from dotenv import load_dotenv
 # Load mimiplay/.env first so OPENAI_API_KEY / MONGODB_URI etc. are set before any route imports.
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
+# ---------------------------------------------------------------------------
+# AUTHENTICATION TOKEN DECORATOR
+# ---------------------------------------------------------------------------
+from functools import wraps
+
+def require_auth_token(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.replace("Bearer ", "").strip()
+        if token != os.getenv("API_TOKEN"):
+            return jsonify({"error": "Unauthorized - Invalid token"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
 import csv
 from pymongo import MongoClient  # MongoDB ke liye import
 import speech_recognition as sr
@@ -20,7 +36,7 @@ from pydub import AudioSegment
 import io
 from datetime import datetime
 from bson import ObjectId
-from bson.json_util import dumps
+from bson.json_util import dumps 
 import logging
 import sys
 import asyncio
@@ -223,6 +239,7 @@ def _generate_tts_audio_base64(text: str) -> str:
 
 
 @app.route('/speak', methods=['POST'])
+@require_auth_token
 def speak_text():
     """Generates audio from text using edge-tts and returns it as base64."""
     data = request.get_json()
@@ -482,6 +499,7 @@ QUESTION_PROMPTS = {
 #         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/get-attendance-logs', methods=['GET'])
+@require_auth_token
 def get_attendance_logs():
     try:
         # MongoDB se saara data nikalna (latest records pehle)
@@ -495,6 +513,7 @@ def get_attendance_logs():
 
 
 @app.route('/start-classroom', methods=['GET'])
+@require_auth_token
 def start_classroom():
     try:
         system.fully_handled_this_session.clear()
@@ -601,6 +620,7 @@ def start_classroom():
 #         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/start-face-detect', methods=['GET'])
+@require_auth_token
 def start_face_detect():
     try:
         # AGAR PEHLE SE CHAL RAHA HAI TOH DUBARA START NA KAREIN
@@ -702,6 +722,7 @@ def start_face_detect():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/stop-face-detect', methods=['GET'])
+@require_auth_token
 def stop_face_detect():
     """Stop the activity face detection loop."""
     try:
@@ -712,6 +733,7 @@ def stop_face_detect():
 
 
 @app.route('/get-status', methods=['GET'])
+@require_auth_token
 def get_status():
     """
     Real-time status from Python face recognition system.
@@ -748,6 +770,7 @@ def get_status():
 
 
 @app.route('/start-mimi-session', methods=['GET', 'POST'])
+@require_auth_token
 def start_mimi_session():
     student_name = request.args.get('student_name', '') or (request.get_json() or {}).get('student_name', '')
     session_id   = request.args.get('session_id', '')   or (request.get_json() or {}).get('session_id', '')
@@ -777,6 +800,7 @@ def start_mimi_session():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/mimi-get', methods=['GET'])
+@require_auth_token
 def mimi_get():
     try:
         text = getattr(mimi_system, 'current_text', None)
@@ -816,6 +840,7 @@ def mimi_get():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/mimi-wake', methods=['POST'])
+@require_auth_token
 def mimi_wake():
     try:
         if 'audio' not in request.files:
@@ -843,6 +868,7 @@ def mimi_wake():
 
 
 @app.route('/mimi-chat-audio', methods=['POST'])
+@require_auth_token
 def mimi_chat_audio():
     try:
         if 'audio' not in request.files:
@@ -911,6 +937,7 @@ def mimi_chat_audio():
 
 
 @app.route('/activity-check', methods=['POST'])
+@require_auth_token
 def activity_check():
     """
     Check if child said a word correctly using LLM.
@@ -964,6 +991,7 @@ def activity_check():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/generate-activity-questions', methods=['POST'])
+@require_auth_token
 def generate_activity_questions():
     """
     Generate fresh LLM questions for activities 9-12.
@@ -1062,6 +1090,7 @@ def generate_activity_questions():
 
 
 @app.route('/save-activity-result', methods=['POST'])
+@require_auth_token
 def save_activity_result():
     try:
         from datetime import datetime
@@ -1114,6 +1143,7 @@ def save_activity_result():
 
 
 @app.route('/get-student-stars/<student_id>', methods=['GET'])
+@require_auth_token
 def get_student_stars(student_id):
     """Return total and today's stars for a student."""
     try:
@@ -1132,6 +1162,7 @@ def get_student_stars(student_id):
 
 
 @app.route('/stop-classroom', methods=['GET'])
+@require_auth_token
 def stop_classroom():
     try:
         if hasattr(system, 'stop'):
@@ -1144,6 +1175,7 @@ def stop_classroom():
 
 
 @app.route('/attendance', methods=['GET'])
+@require_auth_token
 def get_attendance():
     try:
         attendance_file = os.path.join(os.path.dirname(__file__), "attendance.csv")
@@ -1156,6 +1188,7 @@ def get_attendance():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/check-attendance', methods=['POST'])
+@require_auth_token
 def check_attendance():
 
     data = request.json
@@ -1168,6 +1201,7 @@ def check_attendance():
 
 
 @app.route('/register-face', methods=['POST'])
+@require_auth_token
 def register_face():
     try:
         import cv2
@@ -1202,6 +1236,7 @@ def register_face():
 
 
 @app.route('/get-student-id-by-name', methods=['POST'])
+@require_auth_token
 def get_student_id_by_name():
     try:
         data = request.get_json() or {}
@@ -1234,6 +1269,7 @@ def get_student_id_by_name():
 
 
 @app.route('/mark-attendance', methods=['POST'])
+@require_auth_token
 def mark_attendance():
     try:
         data = request.get_json() or {}
@@ -1299,6 +1335,7 @@ def mark_attendance():
 
     
 @app.route('/process-frame', methods=['POST'])
+@require_auth_token
 def process_frame():
     try:
         import base64, numpy as np
@@ -1366,6 +1403,7 @@ def process_frame():
 
 
 @app.route('/mimi-save-chat', methods=['POST'])
+@require_auth_token
 def mimi_save_chat():
     """
     Har ek Q&A ke baad call hota hai.
@@ -1457,3 +1495,5 @@ app.register_blueprint(teacher_bp)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, port=port, host='0.0.0.0')
+
+
