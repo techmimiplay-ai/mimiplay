@@ -17,20 +17,32 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 # AUTHENTICATION TOKEN DECORATOR
 # ---------------------------------------------------------------------------
 from functools import wraps
+from config import SECRET  # Core secret for JWT validation
 
 def require_auth_token(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # 1. Extract token from Authorization header
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.replace("Bearer ", "").strip()
-        if token != os.getenv("API_TOKEN"):
-            return jsonify({"error": "Unauthorized - Invalid token"}), 401
+        
+        if not token:
+            logger.warning("[Auth] Token missing in request")
+            return jsonify({"error": "Unauthorized - Token missing"}), 401
+            
+        try:
+            # 2. Decode and validate JWT
+            # This must match the SECRET and algorithm used in auth_routes.py
+            jwt.decode(token, SECRET, algorithms=["HS256"])
+        except Exception as e:
+            logger.error(f"[Auth] JWT Validation failed: {e}")
+            return jsonify({"error": f"Unauthorized - {str(e)}"}), 401
+            
         return f(*args, **kwargs)
     return decorated
 
-
 import csv
-from pymongo import MongoClient  # MongoDB ke liye import
+from pymongo import MongoClient
 import speech_recognition as sr
 from pydub import AudioSegment
 import io
