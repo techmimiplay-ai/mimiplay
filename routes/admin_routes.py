@@ -3,6 +3,8 @@ from bson import ObjectId
 from datetime import datetime
 # from extensions import users, bcrypt
 from extensions import users, attendance_collection, bcrypt, students
+# from routes.auth_routes import token_required
+from routes.auth_routes import token_required, admin_required
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -10,6 +12,8 @@ admin_bp = Blueprint("admin", __name__)
 # ADMIN DASHBOARD STATS
 # ============================
 @admin_bp.route('/api/admin/dashboard-stats', methods=['GET'])
+# @token_required
+@admin_required
 def dashboard_stats():
     try:
         total_teachers = users.count_documents({"role": "teacher"})
@@ -40,6 +44,8 @@ def dashboard_stats():
 #     return dumps(data)
 
 @admin_bp.route('/api/admin/pending-users', methods=['GET'])
+# @token_required
+@admin_required
 def get_pending_users():
     pending = list(users.find({"status": "pending"}))
 
@@ -59,6 +65,8 @@ def get_pending_users():
 # APPROVE USER
 # ============================
 @admin_bp.route('/api/admin/approve/<id>', methods=['PUT'])
+# @token_required
+@admin_required
 def approve_user(id):
     users.update_one(
         {"_id": ObjectId(id)},
@@ -68,6 +76,8 @@ def approve_user(id):
 
 
 @admin_bp.route('/api/admin/all-users')
+# @token_required
+@admin_required
 def all_users():
     all_users = list(users.find({"role": {"$in": ["parent", "teacher"]}}))
 
@@ -91,6 +101,8 @@ def all_users():
 
 
 @admin_bp.route('/api/admin/add-teacher', methods=['POST'])
+# @token_required
+@admin_required
 def add_teacher():
     data = request.json
 
@@ -116,6 +128,8 @@ def add_teacher():
 # EDIT TEACHER
 # ============================
 @admin_bp.route('/api/admin/edit-teacher/<id>', methods=['PUT'])
+# @token_required
+@admin_required
 def edit_teacher(id):
     data = request.json
 
@@ -148,6 +162,8 @@ def edit_teacher(id):
 # EDIT PARENT
 # ============================
 @admin_bp.route('/api/admin/edit-parent/<id>', methods=['PUT'])
+# @token_required
+@admin_required
 def edit_parent(id):
     data = request.json
 
@@ -178,6 +194,8 @@ def edit_parent(id):
 
 
 @admin_bp.route('/api/admin/add-student', methods=['POST'])
+# @token_required
+@admin_required
 def add_student():
     data = request.json
 
@@ -210,6 +228,8 @@ def add_student():
     return jsonify({"msg": "Student added successfully"})
 
 @admin_bp.route('/api/admin/all-students', methods=['GET'])
+# @token_required
+@admin_required
 def get_all_students():
     all_students = list(students.find())
 
@@ -231,6 +251,8 @@ def get_all_students():
     return jsonify(formatted)
 
 @admin_bp.route('/api/admin/edit-student/<id>', methods=['PUT'])
+# @token_required
+@admin_required
 def edit_student(id):
     data = request.json
 
@@ -256,6 +278,8 @@ def edit_student(id):
     return jsonify({"msg": "Student updated successfully"})
 
 @admin_bp.route('/api/admin/delete-student/<id>', methods=['DELETE'])
+# @token_required
+@admin_required
 def delete_student(id):
     students.delete_one({"_id": ObjectId(id)})
     return jsonify({"msg": "Student deleted successfully"})

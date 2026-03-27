@@ -61,11 +61,13 @@ from datetime import datetime
 import os
 from pymongo import MongoClient
 from extensions import students, users
+from routes.auth_routes import token_required
 
 parent_bp = Blueprint('parent_bp', __name__)
 
 # ── Existing route — rakho jaise hai ────────────────────────
 @parent_bp.route('/api/parent/my-children/<parent_id>', methods=['GET'])
+@token_required
 def get_parent_children(parent_id):
     try:
         my_students = list(students.find({"parent_id": ObjectId(parent_id)}))
@@ -85,6 +87,7 @@ def get_parent_children(parent_id):
 
 # ── NEW: Child data for ParentHome ───────────────────────────
 @parent_bp.route('/api/parent/child-data', methods=['GET'])
+@token_required
 def get_child_data():
     try:
         parent_id = request.args.get('parent_id')
@@ -149,6 +152,7 @@ def get_child_data():
 
 # ── NEW: Child stars for ParentHome ─────────────────────────
 @parent_bp.route('/api/parent/child-stars', methods=['GET'])
+@token_required
 def get_child_stars():
     try:
         student_id = request.args.get('student_id')
@@ -193,6 +197,7 @@ def get_child_stars():
 
 
 @parent_bp.route('/api/parent/check-attendance', methods=['GET'])
+@token_required
 def check_child_attendance():
     try:
         student_id = request.args.get('student_id')
@@ -231,6 +236,7 @@ def check_child_attendance():
 
 
 @parent_bp.route('/api/parent/profile', methods=['GET'])
+@token_required
 def get_parent_profile():
     try:
         parent_id = request.args.get('parent_id')
@@ -257,6 +263,7 @@ def get_parent_profile():
 
 
 @parent_bp.route('/api/parent/profile', methods=['PUT'])
+@token_required
 def update_parent_profile():
     try:
         parent_id = request.args.get('parent_id')

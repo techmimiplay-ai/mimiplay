@@ -1,12 +1,12 @@
 [
   {
-    "student_name": "Rahil",
-    "student_id": "student-1",
-    "activity_id": 0,
-    "activity_name": "Math Quiz",
-    "stars": 5,
-    "score": 90,
-    "timestamp": "2026-03-26T18:57:39.053127",
+    "student_name": "Vini",
+    "student_id": "69aa90eb1ea42ce8211b9274",
+    "activity_id": 3,
+    "activity_name": "Fruits Recognition",
+    "stars": 3,
+    "score": 83,
+    "timestamp": "2026-03-26T13:14:11.059164",
     "date": "2026-03-26",
-    "time": "18:57:39",
+    "time": "13:14:11",
     "_id": 

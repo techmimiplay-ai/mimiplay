@@ -4,6 +4,8 @@ import json
 import threading
 import requests
 import logging
+from extensions import mimi_chats
+from datetime import datetime
 
 try:
     from face_detection.face_detection import SpeechManager, SpeechRecognizer
@@ -16,9 +18,6 @@ except Exception:
         SpeechRecognizer = None
 
 logger = logging.getLogger(__name__)
-
-
-
 
 try:
     import openai as _openai_sdk
@@ -52,8 +51,11 @@ class MimiLLMSession:
         self.current_student = None   # current student name
         self._stop = False
         self._thread = None
+        self.student_name = ""   # ← YE ADD KARO
+        self.session_id   = ""
+        self.student_id   = None
 
-        # Read API keys: use explicit args if provided, else fall back to environment
+        # Prefer explicit keys (e.g. from app.py); else environment
         self.openai_key = openai_api_key if openai_api_key is not None else os.environ.get("OPENAI_API_KEY")
         self.anthropic_key = anthropic_api_key if anthropic_api_key is not None else os.environ.get("ANTHROPIC_API_KEY")
         self.youtube_key = os.environ.get("YOUTUBE_API_KEY")
@@ -217,8 +219,7 @@ class MimiLLMSession:
         except Exception as e:
             logger.warning('Failed to parse JSON from LLM response: %s', e)
         return None
-
-
+    
     def _fetch_youtube_video_url(self, search_term):
         api_key = self.youtube_key
         if not api_key:
@@ -296,18 +297,19 @@ class MimiLLMSession:
         search = data.get("image_search_term") or ""
         print("WIKIMEDIA SEARCH:", search)
         image_url = self._fetch_wikimedia_image(search) if search else None
-        image_url = image_url if image_url else None
         print("WIKIMEDIA RESULT:", image_url)
-
-        # YouTube: use search term from LLM to build a search URL
         yt_search = data.get("youtube_search_term") or ""
-        yt_video = None 
+        yt_video = None
         if yt_search and yt_search.lower() not in ("null", "none", ""):
             import urllib.parse
+            # API key se try karo
             yt_video = self._fetch_youtube_video_url(yt_search)
+            # API key nahi hai toh search URL banao (no key needed)
+            if not yt_video:
+                yt_video = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(yt_search + " for kids")
+            print("YOUTUBE URL:", yt_video)
             print("YOUTUBE SEARCH URL:", yt_video)
-
-        return { 
+        return {
             "text": data.get("text") or "",
             "image_url": image_url,
             "yt_video": yt_video,
@@ -397,7 +399,39 @@ class MimiLLMSession:
             self.current_image = llm_json.get('image_url')
             self.current_video = llm_json.get('yt_video')
 
-            # speak the text - don't listen while speaking
+            # ── MongoDB mein save karo ──────────────────────────
+            try:
+                now = datetime.now()
+                mimi_chats.update_one(
+                    {
+                        "session_id":   self.session_id,
+                        "student_name": self.student_name
+                    },
+                    {
+                        "$push": {
+                            "messages": {
+                                "question":  user_text,
+                                "answer":    self.current_text or "",
+                                "image_url": self.current_image or "",
+                                "time":      now.strftime("%I:%M %p")
+                            }
+                        },
+                        "$setOnInsert": {
+                            "student_id": self.student_id,
+                            "date":       now.strftime("%Y-%m-%d"),
+                            "started_at": now.isoformat()
+                        },
+                        "$set": {"updated_at": now.isoformat()},
+                        "$inc": {"total_msgs": 1}
+                    },
+                    upsert=True
+                )
+                logger.info(f"[DB] Saved Q&A for '{self.student_name}': {user_text[:40]}")
+            except Exception as db_err:
+                logger.error(f"[DB] Save error: {db_err}")
+            # ────────────────────────────────────────────────────
+
+            # speak the text
             if self.current_text:
                 self.current_action = 'speaking'
                 self.speech.speak_and_wait(self.current_text)
@@ -407,27 +441,78 @@ class MimiLLMSession:
             self.current_action = 'showing'
             time.sleep(1)
 
+    # def process_text(self, user_text):
+    #     """Processes a single text input from the frontend."""
+    #     self.current_action = 'thinking'
+    #     self.current_text = 'Thinking...'
+        
+    #     try:
+    #         llm_json = self._get_llm_response_json(user_text)
+            
+    #         # update instance fields for polling
+    #         self.current_text = llm_json.get('text')
+    #         self.current_image = llm_json.get('image_url')
+    #         self.current_video = llm_json.get('yt_video')
+    #         self.current_action = 'speaking'
+            
+    #         return llm_json
+    #     except Exception as e:
+    #         logger.error("Error in process_text: %s", e)
+    #         return {"text": "Sorry, I encountered an error while thinking.", "error": str(e)}
     def process_text(self, user_text):
-        """Processes a single text input from the frontend."""
+    # """Processes a single text input from the frontend."""
         self.current_action = 'thinking'
         self.current_text = 'Thinking...'
-        
+
         try:
             llm_json = self._get_llm_response_json(user_text)
-            
+
             # update instance fields for polling
-            self.current_text = llm_json.get('text')
-            self.current_image = llm_json.get('image_url')
-            self.current_video = llm_json.get('yt_video')
+            self.current_text   = llm_json.get('text')
+            self.current_image  = llm_json.get('image_url')
+            self.current_video  = llm_json.get('yt_video')
             self.current_action = 'speaking'
-            
+
+            # ── MongoDB mein save karo (return se PEHLE) ──────────
+            try:
+                now = datetime.now()
+                mimi_chats.update_one(
+                    {
+                        "session_id":   self.session_id,
+                        "student_name": self.student_name
+                    },
+                    {
+                        "$push": {
+                            "messages": {
+                                "question":  user_text,
+                                "answer":    self.current_text or "",
+                                "image_url": self.current_image or "",
+                                "time":      now.strftime("%I:%M %p")
+                            }
+                        },
+                        "$setOnInsert": {
+                            "date":       now.strftime("%Y-%m-%d"),
+                            "started_at": now.isoformat()
+                        },
+                        "$set": {"updated_at": now.isoformat()},
+                        "$inc": {"total_msgs": 1}
+                    },
+                    upsert=True
+                )
+                logger.info(f"[DB] Saved Q&A for '{self.student_name}': {user_text[:40]}")
+            except Exception as db_err:
+                logger.error(f"[DB] Save error: {db_err}")
+            # ──────────────────────────────────────────────────────
+
             return llm_json
+
         except Exception as e:
             logger.error("Error in process_text: %s", e)
             return {"text": "Sorry, I encountered an error while thinking.", "error": str(e)}
 
+        
+
     def start(self):
-        return
         if self._thread and self._thread.is_alive():
             return
         self._stop = False

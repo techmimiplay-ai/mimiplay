@@ -3,6 +3,8 @@ from pymongo import MongoClient
 import os
 from bson import ObjectId
 from datetime import datetime, timedelta
+# from routes.auth_routes import token_required
+from routes.auth_routes import token_required, teacher_required
 
 teacher_bp = Blueprint('teacher_bp', __name__)
 
@@ -10,6 +12,8 @@ teacher_bp = Blueprint('teacher_bp', __name__)
 # GET /api/teacher/dashboard-stats
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/dashboard-stats', methods=['GET'])
+# @token_required
+@teacher_required
 def get_teacher_dashboard_stats():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -71,6 +75,8 @@ def get_teacher_dashboard_stats():
 # GET /api/teacher/attendance?date=YYYY-MM-DD
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/attendance', methods=['GET'])
+# @token_required
+@teacher_required
 def get_attendance_by_date():
     try:
         date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
@@ -106,6 +112,8 @@ def get_attendance_by_date():
 # POST /api/teacher/attendance/update
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/attendance/update', methods=['POST'])
+# @token_required
+@teacher_required
 def update_attendance_manual():
     try:
         data       = request.get_json() or {}
@@ -158,6 +166,8 @@ def update_attendance_manual():
 # GET /api/admin/all-students-with-stats
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/admin/all-students-with-stats', methods=['GET'])
+# @token_required
+@teacher_required
 def get_all_students_with_stats():
     try:
         db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
@@ -219,6 +229,8 @@ def get_all_students_with_stats():
 # GET /api/teacher/profile
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/profile', methods=['GET'])
+# @token_required
+@teacher_required
 def get_teacher_profile():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -251,6 +263,8 @@ def get_teacher_profile():
 # PUT /api/teacher/profile
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/profile', methods=['PUT'])
+# @token_required
+@teacher_required
 def update_teacher_profile():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -288,6 +302,8 @@ def update_teacher_profile():
 # PUT /api/teacher/change-password
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/change-password', methods=['PUT'])
+# @token_required
+@teacher_required
 def change_teacher_password():
     try:
         teacher_id = request.args.get('teacher_id')
@@ -324,4 +340,122 @@ def change_teacher_password():
 
     except Exception as e:
         print(f"[change-password] ERROR: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+        # ─────────────────────────────────────────────────────────────
+# GET /api/teacher/reports
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/reports', methods=['GET'])
+# @token_required
+@teacher_required
+def get_teacher_reports():
+    try:
+        start_date = request.args.get('start_date', (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d"))
+        end_date   = request.args.get('end_date', datetime.now().strftime("%Y-%m-%d"))
+        db         = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
+
+        # All activity results in date range
+        all_results = list(db["activity_results"].find({
+            "date": {"$gte": start_date, "$lte": end_date}
+        }))
+
+        # Class Stats
+        total_students   = db["students"].count_documents({})
+        total_activities = len(all_results)
+        total_stars      = sum(r.get("stars", 0) for r in all_results)
+        avg_score        = round(sum(r.get("stars", 0) for r in all_results) / len(all_results), 1) if all_results else 0
+
+        # Attendance average
+        attendance_records = list(db["attendance"].find({
+            "date": {"$gte": start_date, "$lte": end_date}
+        }))
+        avg_attendance = round((len(attendance_records) / (total_students * 7)) * 100) if total_students > 0 else 0
+        avg_attendance = min(avg_attendance, 100)
+
+        # Weekly Progress (last 5 days)
+        weekly_progress = []
+        for i in range(4, -1, -1):
+            day       = datetime.now() - timedelta(days=i)
+            day_str   = day.strftime("%Y-%m-%d")
+            day_name  = day.strftime("%a")
+            day_results = [r for r in all_results if r.get("date") == day_str]
+            day_avg   = round(sum(r.get("stars", 0) for r in day_results) / len(day_results), 1) if day_results else 0
+            weekly_progress.append({
+                "day":        day_name,
+                "activities": len(day_results),
+                "avgScore":   day_avg
+            })
+
+        # Activity Breakdown
+        activity_map = {}
+        for r in all_results:
+            name = r.get("activity_name", "Unknown")
+            if name not in activity_map:
+                activity_map[name] = {"scores": [], "completed": 0}
+            activity_map[name]["scores"].append(r.get("stars", 0))
+            activity_map[name]["completed"] += 1
+
+        activity_breakdown = []
+        for name, data in activity_map.items():
+            avg = round(sum(data["scores"]) / len(data["scores"]), 1) if data["scores"] else 0
+            pct = round((sum(1 for s in data["scores"] if s >= 3) / len(data["scores"])) * 100) if data["scores"] else 0
+            activity_breakdown.append({
+                "activity":   name,
+                "avgScore":   avg,
+                "completed":  data["completed"],
+                "percentage": pct
+            })
+
+        # Top Performers
+        student_map = {}
+        for r in all_results:
+            sname = r.get("student_name", "Unknown")
+            if sname not in student_map:
+                student_map[sname] = {"stars": 0, "scores": []}
+            student_map[sname]["stars"] += r.get("stars", 0)
+            student_map[sname]["scores"].append(r.get("stars", 0))
+
+        sorted_students = sorted(student_map.items(), key=lambda x: x[1]["stars"], reverse=True)
+
+        top_performers = []
+        for rank, (name, data) in enumerate(sorted_students[:3], 1):
+            avg = round(sum(data["scores"]) / len(data["scores"]), 1) if data["scores"] else 0
+            top_performers.append({
+                "rank":  rank,
+                "name":  name,
+                "score": avg,
+                "stars": data["stars"],
+                "trend": "up"
+            })
+
+        # Needs Attention (low scorers)
+        needs_attention = []
+        for name, data in sorted_students:
+            avg = round(sum(data["scores"]) / len(data["scores"]), 1) if data["scores"] else 0
+            if avg < 3.5:
+                needs_attention.append({
+                    "name":        name,
+                    "score":       avg,
+                    "subject":     "General",
+                    "improvement": "needed"
+                })
+
+        return jsonify({
+            "status": "success",
+            "classStats": {
+                "avgScore":        avg_score,
+                "totalActivities": total_activities,
+                "totalStars":      total_stars,
+                "avgAttendance":   avg_attendance,
+                "improvement":     "+0%"
+            },
+            "weeklyProgress":    weekly_progress,
+            "activityBreakdown": activity_breakdown,
+            "topPerformers":     top_performers,
+            "needsAttention":    needs_attention
+        })
+
+    except Exception as e:
+        print(f"[teacher-reports] ERROR: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
