@@ -1460,7 +1460,48 @@ def mimi_save_chat():
         logger.error(f"[mimi-save-chat] ERROR: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
-      
+
+
+@app.route('/api/mimi/chat-history', methods=['GET'])
+def get_mimi_chat_history():
+    """Session ki saari chats return karo"""
+    try:
+        student_name = request.args.get('student_name', '')
+        session_id   = request.args.get('session_id', '')
+
+        query = {}
+        if student_name:
+            query['student_name'] = {'$regex': f'^{student_name}$', '$options': 'i'}
+        if session_id:
+            query['session_id'] = session_id
+
+        # Use dumps() from bson.json_util to handle ObjectId automatically
+        docs_raw = list(mimi_chats.find(query))
+        # Convert ObjectId fields to string manually for jsonify
+        docs = []
+        for d in docs_raw:
+            d['_id'] = str(d['_id'])
+            if 'student_id' in d and d['student_id'] is not None:
+                d['student_id'] = str(d['student_id'])
+            docs.append(d)
+
+        # Count total messages across all session docs
+        total_msgs = sum(len(d.get('messages', [])) for d in docs)
+
+        return jsonify({'chats': docs, 'count': len(docs), 'total_msgs': total_msgs})
+    except Exception as e:
+        logger.error(f"Chat history error: {e}")
+        return jsonify({'chats': [], 'count': 0}), 500
+
+@app.route('/api/mimi/stop-session', methods=['POST'])
+def stop_mimi_session():
+    """Session stop karo"""
+    try:
+        if mimi_system:
+            mimi_system.session_ended = True
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
