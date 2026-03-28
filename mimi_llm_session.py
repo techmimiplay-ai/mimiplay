@@ -474,6 +474,7 @@ class MimiLLMSession:
             self.current_action = 'speaking'
 
             # ── MongoDB mein save karo (return se PEHLE) ──────────
+            
             try:
                 now = datetime.now()
                 mimi_chats.update_one(
@@ -526,3 +527,4 @@ class MimiLLMSession:
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     MimiLLMSession().run()
+
