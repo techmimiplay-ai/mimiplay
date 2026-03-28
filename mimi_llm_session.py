@@ -301,14 +301,8 @@ class MimiLLMSession:
         yt_search = data.get("youtube_search_term") or ""
         yt_video = None
         if yt_search and yt_search.lower() not in ("null", "none", ""):
-            import urllib.parse
-            # API key se try karo
-            yt_video = self._fetch_youtube_video_url(yt_search)
-            # API key nahi hai toh search URL banao (no key needed)
-            if not yt_video:
-                yt_video = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(yt_search + " for kids")
-            print("YOUTUBE URL:", yt_video)
-            print("YOUTUBE SEARCH URL:", yt_video)
+              yt_video = self._fetch_youtube_video_url(yt_search)
+              print("YOUTUBE URL:", yt_video)
         return {
             "text": data.get("text") or "",
             "image_url": image_url,
@@ -474,6 +468,7 @@ class MimiLLMSession:
             self.current_action = 'speaking'
 
             # ── MongoDB mein save karo (return se PEHLE) ──────────
+            
             try:
                 now = datetime.now()
                 mimi_chats.update_one(
@@ -526,3 +521,5 @@ class MimiLLMSession:
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     MimiLLMSession().run()
+
+
