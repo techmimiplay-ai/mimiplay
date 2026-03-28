@@ -17,20 +17,32 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 # AUTHENTICATION TOKEN DECORATOR
 # ---------------------------------------------------------------------------
 from functools import wraps
+from config import SECRET  # Core secret for JWT validation
 
 def require_auth_token(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # 1. Extract token from Authorization header
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.replace("Bearer ", "").strip()
-        if token != os.getenv("API_TOKEN"):
-            return jsonify({"error": "Unauthorized - Invalid token"}), 401
+        
+        if not token:
+            logger.warning("[Auth] Token missing in request")
+            return jsonify({"error": "Unauthorized - Token missing"}), 401
+            
+        try:
+            # 2. Decode and validate JWT
+            # This must match the SECRET and algorithm used in auth_routes.py
+            jwt.decode(token, SECRET, algorithms=["HS256"])
+        except Exception as e:
+            logger.error(f"[Auth] JWT Validation failed: {e}")
+            return jsonify({"error": f"Unauthorized - {str(e)}"}), 401
+            
         return f(*args, **kwargs)
     return decorated
 
-
 import csv
-from pymongo import MongoClient  # MongoDB ke liye import
+from pymongo import MongoClient
 import speech_recognition as sr
 from pydub import AudioSegment
 import io
@@ -1483,7 +1495,48 @@ def mimi_save_chat():
         logger.error(f"[mimi-save-chat] ERROR: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
-      
+
+
+@app.route('/api/mimi/chat-history', methods=['GET'])
+def get_mimi_chat_history():
+    """Session ki saari chats return karo"""
+    try:
+        student_name = request.args.get('student_name', '')
+        session_id   = request.args.get('session_id', '')
+
+        query = {}
+        if student_name:
+            query['student_name'] = {'$regex': f'^{student_name}$', '$options': 'i'}
+        if session_id:
+            query['session_id'] = session_id
+
+        # Use dumps() from bson.json_util to handle ObjectId automatically
+        docs_raw = list(mimi_chats.find(query))
+        # Convert ObjectId fields to string manually for jsonify
+        docs = []
+        for d in docs_raw:
+            d['_id'] = str(d['_id'])
+            if 'student_id' in d and d['student_id'] is not None:
+                d['student_id'] = str(d['student_id'])
+            docs.append(d)
+
+        # Count total messages across all session docs
+        total_msgs = sum(len(d.get('messages', [])) for d in docs)
+
+        return jsonify({'chats': docs, 'count': len(docs), 'total_msgs': total_msgs})
+    except Exception as e:
+        logger.error(f"Chat history error: {e}")
+        return jsonify({'chats': [], 'count': 0}), 500
+
+@app.route('/api/mimi/stop-session', methods=['POST'])
+def stop_mimi_session():
+    """Session stop karo"""
+    try:
+        if mimi_system:
+            mimi_system.session_ended = True
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)

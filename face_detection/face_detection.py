@@ -804,7 +804,9 @@ class SpeechRecognizer:
             self.recognizer.non_speaking_duration = 0.5
             logger.info("SpeechRecognizer ready")
         except Exception as e:
-            logger.error(f"SpeechRecognizer init failed: {e}")
+            # Downgrade to WARNING: this is expected in Docker/Server environments 
+            # where no physical microphone is present.
+            logger.warning(f"Microphone/PyAudio not found (expected in Docker/Server): {e}")
             self.recognizer = None
             self.microphone = None
 
