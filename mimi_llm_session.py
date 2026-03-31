@@ -80,7 +80,7 @@ class MimiLLMSession:
     "RESPONSE FORMAT: Always reply with a JSON object only. Keys: text, image_search_term, youtube_search_term.\n"
     "- text: 1-2 short simple sentences in English only. No Hindi words. No questions.\n"
     "- image_search_term: A short search term to find a relevant image on Wikimedia Commons. Example: 'African elephant'\n"
-    "- youtube_search_term: A short search term to find a relevant nursery rhyme or educational video on YouTube. Example: 'elephant song for kids'. Use null if not needed.\n\n"
+    "- youtube_search_term: A short search term to find a relevant nursery rhyme or educational video on YouTube. Example: 'elephant song for kids'. ALWAYS provide this — never use null.\n\n"
     "Example: {\"text\": \"Elephant is a very big animal! It has a long trunk.\", \"image_search_term\": \"African elephant\", \"youtube_search_term\": \"elephant song for kids\"}"
         )
         user_message = (
@@ -223,25 +223,31 @@ class MimiLLMSession:
     def _fetch_youtube_video_url(self, search_term):
         api_key = self.youtube_key
         if not api_key:
+            print("YouTube: YOUTUBE_API_KEY not set — add it to .env to enable videos")
             return None
+        q = search_term + ("" if "for kids" in search_term.lower() else " for kids")
         try:
             r = requests.get(
                 "https://www.googleapis.com/youtube/v3/search",
                 params={
                     "part": "snippet",
-                    "q": search_term + " for kids",
+                    "q": q,
                     "type": "video",
                     "safeSearch": "strict",
                     "videoEmbeddable": "true",
-                    "maxResults": 1,
+                    "maxResults": 3,
                     "key": api_key,
                 },
                 timeout=10,
             )
             items = r.json().get("items", [])
-            if items:
-                video_id = items[0]["id"]["videoId"]
-                return f"https://www.youtube.com/watch?v={video_id}"
+            for item in items:
+                id_block = item.get("id", {})
+                # Only use actual video results (not channels/playlists)
+                if id_block.get("kind") == "youtube#video":
+                    video_id = id_block.get("videoId", "")
+                    if video_id:
+                        return f"https://www.youtube.com/watch?v={video_id}"
         except Exception as e:
             print("YouTube API error:", e)
         return None
@@ -299,6 +305,7 @@ class MimiLLMSession:
         image_url = self._fetch_wikimedia_image(search) if search else None
         print("WIKIMEDIA RESULT:", image_url)
         yt_search = data.get("youtube_search_term") or ""
+<<<<<<< Updated upstream
         yt_video = None
         if yt_search and yt_search.lower() not in ("null", "none", ""):
             import urllib.parse
@@ -309,6 +316,16 @@ class MimiLLMSession:
                 yt_video = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(yt_search + " for kids")
             print("YOUTUBE URL:", yt_video)
             print("YOUTUBE SEARCH URL:", yt_video)
+=======
+        # Derive a fallback search term if the LLM omitted it
+        if not yt_search or yt_search.lower() in ("null", "none"):
+            yt_search = data.get("image_search_term") or ""
+        if not yt_search:
+            # Last resort: use the first few words of the response text
+            yt_search = " ".join((data.get("text") or "").split()[:4])
+        yt_video = self._fetch_youtube_video_url(yt_search) if yt_search else None
+        print("YOUTUBE URL:", yt_video)
+>>>>>>> Stashed changes
         return {
             "text": data.get("text") or "",
             "image_url": image_url,
