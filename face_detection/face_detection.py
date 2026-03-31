@@ -700,7 +700,7 @@ class SpeechManager:
             pygame.mixer.init()
 
             async def speak(text, path):
-                communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+                communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaExpressiveNeural", rate="-10%", pitch="+15Hz")
                 await communicate.save(path)
         except Exception as e:
             logger.warning(f"Audio TTS playback dependencies missing. Audio is disabled: {e}")

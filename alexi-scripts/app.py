@@ -276,7 +276,7 @@ def speak_text():
     data = request.get_json()
     text = data.get('text', '')
     async def generate(text, path):
-        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaExpressiveNeural", rate="-10%", pitch="+15Hz")
         await communicate.save(path)
     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
         tmp_path = f.name
