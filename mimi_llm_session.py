@@ -305,27 +305,14 @@ class MimiLLMSession:
         image_url = self._fetch_wikimedia_image(search) if search else None
         print("WIKIMEDIA RESULT:", image_url)
         yt_search = data.get("youtube_search_term") or ""
-<<<<<<< Updated upstream
-        yt_video = None
-        if yt_search and yt_search.lower() not in ("null", "none", ""):
-            import urllib.parse
-            # API key se try karo
-            yt_video = self._fetch_youtube_video_url(yt_search)
-            # API key nahi hai toh search URL banao (no key needed)
-            if not yt_video:
-                yt_video = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(yt_search + " for kids")
-            print("YOUTUBE URL:", yt_video)
-            print("YOUTUBE SEARCH URL:", yt_video)
-=======
-        # Derive a fallback search term if the LLM omitted it
+        # Ensure we always have a search term — fall back to image term or response text
         if not yt_search or yt_search.lower() in ("null", "none"):
             yt_search = data.get("image_search_term") or ""
         if not yt_search:
-            # Last resort: use the first few words of the response text
             yt_search = " ".join((data.get("text") or "").split()[:4])
+        # Fetch an embeddable video ID via YouTube Data API (requires YOUTUBE_API_KEY in .env)
         yt_video = self._fetch_youtube_video_url(yt_search) if yt_search else None
         print("YOUTUBE URL:", yt_video)
->>>>>>> Stashed changes
         return {
             "text": data.get("text") or "",
             "image_url": image_url,
