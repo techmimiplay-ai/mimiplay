@@ -803,11 +803,21 @@ def start_mimi_session():
         logger.warning(f"Could not find student_id: {e}")
     # ────────────────────────────────────────────────────────────
     logger.info(f"Mimi session started for: {student_name} | session: {session_id}")
+
+    # Generate personalised greeting audio
+    greeting_text = f"Hi {student_name}! Great to see you. Go ahead and ask me anything."
+    greeting_audio = _generate_tts_audio_base64(greeting_text)
+
     try:
         thread = threading.Thread(target=mimi_system.start)
         thread.daemon = True
         thread.start()
-        return jsonify({"status": "success", "message": "Mimi LLM session started"})
+        return jsonify({
+            "status": "success",
+            "message": "Mimi LLM session started",
+            "greeting_text": greeting_text,
+            "greeting_audio": greeting_audio,   # base64 MP3 — play on frontend immediately
+        })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
