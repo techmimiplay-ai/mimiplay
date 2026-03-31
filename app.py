@@ -229,7 +229,7 @@ def _generate_tts_audio_base64(text: str) -> str:
     if not text:
         return ""
     async def generate(text, path):
-        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
+        communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaExpressiveNeural", rate="-10%", pitch="+15Hz")
         await communicate.save(path)
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
