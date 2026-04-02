@@ -11,28 +11,113 @@ admin_bp = Blueprint("admin", __name__)
 # ============================
 # ADMIN DASHBOARD STATS
 # ============================
+# @admin_bp.route('/api/admin/dashboard-stats', methods=['GET'])
+# # @token_required
+# @admin_required
+# def dashboard_stats():
+#     try:
+#         total_teachers = users.count_documents({"role": "teacher"})
+#         total_parents = users.count_documents({"role": "parent"})
+#         total_students = students.count_documents({})
+
+#         pending_approvals = users.count_documents({"status": "pending"})
+
+#         active_today = attendance_collection.count_documents({
+#             "date": datetime.now().strftime("%Y-%m-%d")
+#         })
+
+#         return jsonify({
+#             "totalTeachers": total_teachers,
+#             "totalParents": total_parents,
+#             "totalStudents": total_students,
+#             "pendingApprovals": pending_approvals,
+#             "activeToday": active_today,
+#             "systemHealth": "Excellent"
+#         })
+
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
+# ============================
+# ADMIN DASHBOARD STATS
+# ============================
 @admin_bp.route('/api/admin/dashboard-stats', methods=['GET'])
-# @token_required
 @admin_required
 def dashboard_stats():
     try:
-        total_teachers = users.count_documents({"role": "teacher"})
-        total_parents = users.count_documents({"role": "parent"})
-        total_students = students.count_documents({})
+        from pymongo import MongoClient
+        import os
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
-        pending_approvals = users.count_documents({"status": "pending"})
-
-        active_today = attendance_collection.count_documents({
+        total_teachers    = db["users"].count_documents({"role": "teacher"})
+        total_parents     = db["users"].count_documents({"role": "parent"})
+        total_students    = db["students"].count_documents({})
+        pending_approvals = db["users"].count_documents({"status": "pending"})
+        active_today      = db["attendance"].count_documents({
             "date": datetime.now().strftime("%Y-%m-%d")
         })
 
+        # ── Recent Activity: last 10 user registrations/approvals ──
+        recent_users = list(
+            db["users"]
+            .find({}, {"name": 1, "role": 1, "status": 1, "created_at": 1})
+            .sort("created_at", -1)
+            .limit(10)
+        )
+        recent_activity = []
+        for u in recent_users:
+            role   = u.get("role", "user")
+            status = u.get("status", "pending")
+            created = u.get("created_at")
+
+            if status == "approved":
+                action = f"{'Teacher' if role == 'teacher' else 'Parent'} approved"
+                atype  = "success"
+            else:
+                action = f"New {role} registered"
+                atype  = "info"
+
+            # Format time
+            if isinstance(created, datetime):
+                diff = datetime.utcnow() - created
+                minutes = int(diff.total_seconds() / 60)
+                if minutes < 60:
+                    time_str = f"{minutes} min ago"
+                elif minutes < 1440:
+                    time_str = f"{minutes // 60} hours ago"
+                else:
+                    time_str = f"{minutes // 1440} days ago"
+            else:
+                time_str = "Recently"
+
+            recent_activity.append({
+                "action": action,
+                "user":   u.get("name", "Unknown"),
+                "time":   time_str,
+                "type":   atype
+            })
+
+        # ── System Stats ──────────────────────────────────────────
+        total_activity_results = db["activity_results"].count_documents({})
+        total_attendance_logs  = db["attendance"].count_documents({})
+
+        system_stats = [
+            {"label": "Total Activity Sessions", "value": str(total_activity_results), "status": "good"},
+            {"label": "Attendance Records",       "value": str(total_attendance_logs),  "status": "good"},
+            {"label": "Pending Approvals",        "value": str(pending_approvals),      "status": "good" if pending_approvals == 0 else "warning"},
+            {"label": "System Health",            "value": "Excellent",                 "status": "good"},
+        ]
+
         return jsonify({
-            "totalTeachers": total_teachers,
-            "totalParents": total_parents,
-            "totalStudents": total_students,
+            "totalTeachers":   total_teachers,
+            "totalParents":    total_parents,
+            "totalStudents":   total_students,
             "pendingApprovals": pending_approvals,
-            "activeToday": active_today,
-            "systemHealth": "Excellent"
+            "activeToday":     active_today,
+            "systemHealth":    "Excellent",
+            "recentActivity":  recent_activity,
+            "systemStats":     system_stats,
         })
 
     except Exception as e:
@@ -283,3 +368,90 @@ def edit_student(id):
 def delete_student(id):
     students.delete_one({"_id": ObjectId(id)})
     return jsonify({"msg": "Student deleted successfully"})
+
+
+# ============================
+# CONFIG: BADGES
+# ============================
+@admin_bp.route('/api/config/badges', methods=['GET'])
+def get_badges_config():
+    badges = [
+        {"id": 1, "icon": "🌟", "name": "First Star",    "description": "Earn your first star",   "unlockAt": 1,   "rarity": "common"},
+        {"id": 2, "icon": "📚", "name": "Bookworm",      "description": "Complete 3 activities",  "unlockAt": 5,   "rarity": "common"},
+        {"id": 3, "icon": "🏃", "name": "Fast Learner",  "description": "Earn 15 stars",          "unlockAt": 15,  "rarity": "common"},
+        {"id": 4, "icon": "🔥", "name": "On Fire",       "description": "Earn 30 stars",          "unlockAt": 30,  "rarity": "uncommon"},
+        {"id": 5, "icon": "🎨", "name": "Color Master",  "description": "Earn 50 stars",          "unlockAt": 50,  "rarity": "rare"},
+        {"id": 6, "icon": "💯", "name": "Perfect Score", "description": "Earn 75 stars",          "unlockAt": 75,  "rarity": "rare"},
+        {"id": 7, "icon": "🏆", "name": "Champion",      "description": "Earn 100 stars",         "unlockAt": 100, "rarity": "epic"},
+        {"id": 8, "icon": "👑", "name": "Legend",        "description": "Earn 200 stars",         "unlockAt": 200, "rarity": "legendary"},
+    ]
+    return jsonify({"status": "success", "badges": badges})
+
+
+# ============================
+# CONFIG: LEVELS
+# ============================
+@admin_bp.route('/api/config/levels', methods=['GET'])
+def get_levels_config():
+    levels = [
+        {"name": "Little Star",  "min": 0,   "max": 49,         "emoji": "⭐"},
+        {"name": "Bright Star",  "min": 50,  "max": 99,         "emoji": "🌟"},
+        {"name": "Super Star",   "min": 100, "max": 199,        "emoji": "💫"},
+        {"name": "Rising Star",  "min": 200, "max": 349,        "emoji": "🚀"},
+        {"name": "Champion",     "min": 350, "max": 499,        "emoji": "🏆"},
+        {"name": "Legend",       "min": 500, "max": 999999999,  "emoji": "👑"},
+    ]
+    return jsonify({"status": "success", "levels": levels})
+
+
+# ============================
+# CONFIG: SKILLS
+# ============================
+@admin_bp.route('/api/config/skills', methods=['GET'])
+def get_skills_config():
+    skills = [
+        {"name": "Alphabets",     "unlocksAt": 0,   "color": "green"},
+        {"name": "Common Fruits", "unlocksAt": 0,   "color": "green"},
+        {"name": "Colors",        "unlocksAt": 10,  "color": "blue"},
+        {"name": "Animals",       "unlocksAt": 30,  "color": "purple"},
+        {"name": "Numbers",       "unlocksAt": 50,  "color": "orange"},
+        {"name": "Phonics",       "unlocksAt": 100, "color": "pink"},
+    ]
+    return jsonify({"status": "success", "skills": skills})
+
+
+# ============================
+# PARENT: CLASS LEADERBOARD
+# ============================
+@admin_bp.route('/api/parent/class-leaderboard', methods=['GET'])
+@token_required
+def get_class_leaderboard():
+    try:
+        from pymongo import MongoClient
+        import os
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
+
+        # Aggregate total stars per student from activity_results
+        pipeline = [
+            {"$group": {
+                "_id":        "$student_id",
+                "name":       {"$first": "$student_name"},
+                "total_stars": {"$sum": "$stars"}
+            }},
+            {"$sort": {"total_stars": -1}},
+            {"$limit": 10}
+        ]
+        results = list(db["activity_results"].aggregate(pipeline))
+
+        leaderboard = []
+        for r in results:
+            leaderboard.append({
+                "student_id": str(r["_id"]),
+                "name":       r.get("name", "Student"),
+                "stars":      r.get("total_stars", 0)
+            })
+
+        return jsonify({"status": "success", "leaderboard": leaderboard})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
