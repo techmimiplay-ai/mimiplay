@@ -459,3 +459,35 @@ def get_teacher_reports():
     except Exception as e:
         print(f"[teacher-reports] ERROR: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/teacher/activity-stats
+# Per-activity completions aur avg score real DB se
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/activity-stats', methods=['GET'])
+@teacher_required
+def get_activity_stats():
+    try:
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
+
+        pipeline = [
+            {"$group": {
+                "_id":               "$activity_id",
+                "activity_name":     {"$first": "$activity_name"},
+                "total_completions": {"$sum": 1},
+                "avg_stars":         {"$avg": "$stars"}
+            }}
+        ]
+        results = list(db["activity_results"].aggregate(pipeline))
+
+        stats_map = {}
+        for r in results:
+            stats_map[r["_id"]] = {
+                "studentsCompleted": r["total_completions"],
+                "avgScore":          round(r["avg_stars"], 1) if r["avg_stars"] else 0
+            }
+
+        return jsonify({"status": "success", "stats": stats_map})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
