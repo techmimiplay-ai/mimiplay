@@ -1222,12 +1222,46 @@ def check_attendance():
         return jsonify({"message": "not_marked"})
 
 
+# @app.route('/register-face', methods=['POST'])
+# @require_auth_token
+# def register_face():
+#     try:
+#         import cv2
+#         import face_recognition as fr
+#         data = request.get_json() or {}
+#         name = (data.get("name") or "").strip()
+#         image = data.get("image", "")
+
+#         if not name or not image:
+#             return jsonify({"status": "error", "message": "Name and Image required"}), 400
+
+#         if "," in image: image = image.split(",", 1)[1]
+#         img_bytes = base64.b64decode(image)
+#         img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+#         frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+#         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#         encodings = fr.face_encodings(rgb, fr.face_locations(rgb))
+#         if not encodings:
+#             return jsonify({"status": "error", "message": "No face detected"}), 400
+
+#         safe_name = re.sub(r'[^a-zA-Z0-9_ ]', '', name).strip().replace(' ', '_')
+#         save_path = os.path.join(system.known_faces_dir, f"{safe_name}.jpg")
+#         cv2.imwrite(save_path, frame)
+
+#         # Hot-reload encodings
+#         system.known_encodings.append(encodings[0])
+#         system.known_names.append(safe_name)
+#         return jsonify({"status": "success", "name": safe_name})
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": str(e)}), 500
 @app.route('/register-face', methods=['POST'])
 @require_auth_token
 def register_face():
     try:
         import cv2
         import face_recognition as fr
+        import gridfs
         data = request.get_json() or {}
         name = (data.get("name") or "").strip()
         image = data.get("image", "")
@@ -1246,12 +1280,31 @@ def register_face():
             return jsonify({"status": "error", "message": "No face detected"}), 400
 
         safe_name = re.sub(r'[^a-zA-Z0-9_ ]', '', name).strip().replace(' ', '_')
-        save_path = os.path.join(system.known_faces_dir, f"{safe_name}.jpg")
-        cv2.imwrite(save_path, frame)
 
-        # Hot-reload encodings
+        # ✅ CHANGE 1: MongoDB GridFS mein save karo (local folder nahi)
+        db_client = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))
+        db = db_client["AlexiDB"]
+        fs = gridfs.GridFS(db)
+
+        # Agar pehle se same naam ki file hai toh purani delete karo
+        for old_file in db.fs.files.find({"filename": f"{safe_name}.jpg"}):
+            fs.delete(old_file["_id"])
+
+        # JPEG bytes banaao aur GridFS mein save karo
+        _, jpeg_bytes = cv2.imencode(".jpg", frame)
+        fs.put(jpeg_bytes.tobytes(), filename=f"{safe_name}.jpg", student_name=safe_name)
+
+        # ✅ CHANGE 2: Student record mein bhi face_registered flag lagao
+        db["students"].update_one(
+            {"name": {"$regex": f"^{name}$", "$options": "i"}},
+            {"$set": {"face_registered": True}}
+        )
+
+        # Hot-reload encodings in memory
         system.known_encodings.append(encodings[0])
         system.known_names.append(safe_name)
+
+        db_client.close()
         return jsonify({"status": "success", "name": safe_name})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

@@ -906,37 +906,95 @@ class FaceRecognitionSystem:
 
     # ── Face loading ────────────────────────────────────────────────────────────
 
+    # def _load_faces(self):
+    #     if face_recognition is None:
+    #         logger.warning("face_recognition module is not available. Skipping face loading.")
+    #         return
+
+    #     if not os.path.exists(self.known_faces_dir):
+    #         os.makedirs(self.known_faces_dir)
+    #         logger.warning(f"Created {self.known_faces_dir} — add face images!")
+    #         return
+
+    #     files = [f for f in os.listdir(self.known_faces_dir)
+    #              if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    #     if not files:
+    #         logger.warning("No images in known_faces/")
+    #         return
+
+    #     for fname in files:
+    #         path = os.path.join(self.known_faces_dir, fname)
+    #         try:
+    #             img       = face_recognition.load_image_file(path)
+    #             encodings = face_recognition.face_encodings(img)
+    #             if not encodings:
+    #                 logger.warning(f"No face in {fname}")
+    #                 continue
+    #             self.known_encodings.append(encodings[0])
+    #             self.known_names.append(os.path.splitext(fname)[0])
+    #             logger.info(f"Loaded: {os.path.splitext(fname)[0]}")
+    #         except Exception as e:
+    #             logger.error(f"Error loading {fname}: {e}")
+
+    #     logger.info(f"Known people ({len(self.known_names)}): {', '.join(self.known_names)}")
     def _load_faces(self):
+        """Load face encodings from MongoDB GridFS instead of local folder."""
         if face_recognition is None:
             logger.warning("face_recognition module is not available. Skipping face loading.")
             return
 
-        if not os.path.exists(self.known_faces_dir):
-            os.makedirs(self.known_faces_dir)
-            logger.warning(f"Created {self.known_faces_dir} — add face images!")
-            return
+        try:
+            import gridfs
+            import cv2
+            from pymongo import MongoClient
 
-        files = [f for f in os.listdir(self.known_faces_dir)
-                 if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-        if not files:
-            logger.warning("No images in known_faces/")
-            return
+            MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
+            client = MongoClient(MONGO_URI)
+            db = client["AlexiDB"]
+            fs = gridfs.GridFS(db)
 
-        for fname in files:
-            path = os.path.join(self.known_faces_dir, fname)
-            try:
-                img       = face_recognition.load_image_file(path)
-                encodings = face_recognition.face_encodings(img)
-                if not encodings:
-                    logger.warning(f"No face in {fname}")
-                    continue
-                self.known_encodings.append(encodings[0])
-                self.known_names.append(os.path.splitext(fname)[0])
-                logger.info(f"Loaded: {os.path.splitext(fname)[0]}")
-            except Exception as e:
-                logger.error(f"Error loading {fname}: {e}")
+            # GridFS se saari face images lo
+            all_files = list(db.fs.files.find({"filename": {"$regex": r"\.jpg$"}}))
 
-        logger.info(f"Known people ({len(self.known_names)}): {', '.join(self.known_names)}")
+            if not all_files:
+                logger.warning("No face images found in MongoDB GridFS. Register faces first.")
+                client.close()
+                return
+
+            for file_doc in all_files:
+                try:
+                    fname = file_doc["filename"]                    # e.g. "Rahil.jpg"
+                    student_name = os.path.splitext(fname)[0]      # e.g. "Rahil"
+
+                    # GridFS se image bytes lo
+                    grid_out = fs.get(file_doc["_id"])
+                    img_bytes = grid_out.read()
+
+                    # Bytes → numpy array → decode as image
+                    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+                    frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                    if frame is None:
+                        logger.warning(f"Could not decode image for {fname}")
+                        continue
+
+                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    encodings = face_recognition.face_encodings(rgb)
+                    if not encodings:
+                        logger.warning(f"No face detected in {fname}")
+                        continue
+
+                    self.known_encodings.append(encodings[0])
+                    self.known_names.append(student_name)
+                    logger.info(f"Loaded from DB: {student_name}")
+
+                except Exception as e:
+                    logger.error(f"Error loading {file_doc.get('filename', '?')} from DB: {e}")
+
+            client.close()
+            logger.info(f"Known people from DB ({len(self.known_names)}): {', '.join(self.known_names)}")
+
+        except Exception as e:
+            logger.error(f"MongoDB face loading failed: {e}")
 
     # ── Wake word ────────────────────────────────────────────────────────────────
  

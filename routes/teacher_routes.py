@@ -215,6 +215,7 @@ def get_all_students_with_stats():
                 "age":         s.get("age",          4),
                 "avg_score":   avg_score,
                 "attendance":  att_pct,
+                "face_registered": s.get("face_registered", False),
                 "created_at":  str(s.get("created_at", "")),
             })
 
@@ -491,3 +492,27 @@ def get_activity_stats():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/teacher/all-parents
+# Teacher ke liye parents list (dropdown ke liye)
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/all-parents', methods=['GET'])
+@teacher_required
+def get_all_parents():
+    try:
+        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
+        parents = list(db["users"].find({"role": "parent"}))
+        result = []
+        for p in parents:
+            result.append({
+                "_id":   str(p["_id"]),
+                "name":  p.get("name", ""),
+                "email": p.get("email", ""),
+                "phone": p.get("phone", ""),
+                "role":  "parent"
+            })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+ 
