@@ -6,6 +6,9 @@ from extensions import users, attendance_collection, bcrypt, students
 # from routes.auth_routes import token_required
 from routes.auth_routes import token_required, admin_required
 
+import re
+import os
+
 admin_bp = Blueprint("admin", __name__)
 
 # ============================
@@ -279,8 +282,8 @@ def edit_parent(id):
 
 
 @admin_bp.route('/api/admin/add-student', methods=['POST'])
-# @token_required
-@admin_required
+@token_required
+# @admin_required
 def add_student():
     data = request.json
 
@@ -290,13 +293,14 @@ def add_student():
     })
 
     student = {
-        "name": data["name"],
-        "class": data["class"],
+        "name": data.get("name", ""),
+        "class": data.get("class", ""),
         "parent_id": parent["_id"] if parent else None,
         "parent_name": data.get("parentName"),
         "email": data.get("email"),
         "phone": data.get("phone"),
         "roll_number": data.get("rollNumber"),
+        "face_registered": False,
         "created_at": datetime.utcnow()
     }
 
@@ -330,7 +334,8 @@ def get_all_students():
             "email": s.get("email"),
             "phone": s.get("phone"),
             "roll_number": s.get("roll_number"),
-            "created_at": s.get("created_at")
+            "created_at": s.get("created_at"),
+            "face_registered": s.get("face_registered", False)
         })
 
     return jsonify(formatted)
@@ -362,13 +367,47 @@ def edit_student(id):
 
     return jsonify({"msg": "Student updated successfully"})
 
+# @admin_bp.route('/api/admin/delete-student/<id>', methods=['DELETE'])
+# # @token_required
+# @admin_required
+# def delete_student(id):
+#     students.delete_one({"_id": ObjectId(id)})
+#     return jsonify({"msg": "Student deleted successfully"})
+
 @admin_bp.route('/api/admin/delete-student/<id>', methods=['DELETE'])
-# @token_required
 @admin_required
 def delete_student(id):
-    students.delete_one({"_id": ObjectId(id)})
-    return jsonify({"msg": "Student deleted successfully"})
+    try:
+        import gridfs
+        from pymongo import MongoClient
 
+        # Pehle student ka naam lo
+        student = students.find_one({"_id": ObjectId(id)})
+        if not student:
+            return jsonify({"msg": "Student not found"}), 404
+
+        student_name = student.get("name", "")
+        safe_name = re.sub(r'[^a-zA-Z0-9_ ]', '', student_name).strip().replace(' ', '_')
+
+        # ✅ GridFS se face image delete karo
+        MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
+        db_client = MongoClient(MONGO_URI)
+        db = db_client["AlexiDB"]
+        fs = gridfs.GridFS(db)
+
+        for file_doc in db.fs.files.find({"filename": f"{safe_name}.jpg"}):
+            fs.delete(file_doc["_id"])
+            print(f"[DeleteStudent] Face image deleted for: {safe_name}")
+
+        db_client.close()
+
+        # Student record delete karo
+        students.delete_one({"_id": ObjectId(id)})
+
+        return jsonify({"msg": "Student deleted successfully"})
+    except Exception as e:
+        print(f"[DeleteStudent] Error: {e}")
+        return jsonify({"msg": "Delete failed", "error": str(e)}), 500
 
 # ============================
 # CONFIG: BADGES
