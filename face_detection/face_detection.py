@@ -1042,88 +1042,11 @@ class FaceRecognitionSystem:
 
 
     def run(self):
-            import cv2
-            self.running = True
-
-            while self.running:
-                cap = cv2.VideoCapture(0)
-                if not cap.isOpened():
-                    cap = cv2.VideoCapture(1)
-                if not cap.isOpened():
-                    logger.error("No camera found! Retrying in 3 seconds...")
-                    time.sleep(3)
-                    continue
-
-                logger.info('Camera started')
-
-                try:
-                    while self.running:
-                        ret, frame = cap.read()
-                        if not ret:
-                            logger.warning("Frame read failed, retrying...")
-                            time.sleep(0.1)
-                            continue
-
-                        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        locations = face_recognition.face_locations(rgb)
-                        encodings = face_recognition.face_encodings(rgb, locations)
-
-                        for enc, loc in zip(encodings, locations):
-                            distances = face_recognition.face_distance(self.known_encodings, enc)
-
-                            if len(distances) and min(distances) < FACE_DISTANCE_THRESHOLD:
-                                name = self.known_names[int(np.argmin(distances))]
-
-                                if name not in self.fully_handled_this_session:
-                                    self.fully_handled_this_session.add(name)
-                                    self.current_person = name
-                                    self.current_action = 'talking'
-
-                                    url = os.getenv("BACKEND_URL", "http://localhost:5000") + "/check-attendance"
-                                    data = {"student_name": name}
-                                    response = requests.post(url, json=data, headers={"Authorization": f"Bearer {os.getenv('API_TOKEN')}"})
-                                    result = response.json()
-
-                                    if result.get("message") == "already_marked":
-                                        self.speech.speak_and_wait(f'Hi {name}, your attendance is already marked today.')
-                                        self.current_action = 'idle'    # ✅ reset
-                                        self.current_person = None      # ✅ reset
-                                        break                           # ✅ continue → break
-
-                                    self.speech.speak_and_wait(f'Hi {name}! How are you today?')
-                                    mood_text = self.mic.listen(timeout=8)
-                                    mood = self.mood_engine.analyze(mood_text)
-
-                                    url = os.getenv("BACKEND_URL", "http://localhost:5000") + "/mark-attendance"
-                                    data = {"student_name": name, "mood": mood}
-                                    response = requests.post(url, json=data, headers={"Authorization": f"Bearer {os.getenv('API_TOKEN')}"})
-                                    result = response.json()
-
-                                    self.current_mood = mood
-                                    if result.get("message") == "already_marked":
-                                        self.current_message = "already_marked"
-                                        self.speech.speak_and_wait(f'{name}, your attendance is already marked today.')
-                                    else:
-                                        self.speech.speak_and_wait(f'Great! Attendance marked. Have a wonderful day {name}!')
-
-                                    self.current_action = 'idle'    # ✅ reset
-                                    self.current_person = None      # ✅ reset
-                                    self.current_mood = None        # ✅ reset
-
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            self.running = False
-                            break
-
-                except Exception as e:
-                    logger.error(f"Camera loop error: {e}")
-                    traceback.print_exc()
-
-                finally:
-                    cap.release()
-                    cv2.destroyAllWindows()
-                    if self.running:
-                        logger.info("Camera released. Restarting loop in 1 second...")
-                        time.sleep(1)
+        # Backend physical camera disabled per user request.
+        # Ensure we set flags but do not open cv2.VideoCapture
+        self.running = True
+        logger.info("Backend physical camera loop disabled.")
+        return
 
     # def run(self):
     #         import cv2

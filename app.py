@@ -639,95 +639,11 @@ def start_face_detect():
         if getattr(system, '_activity_detecting', False):
             return jsonify({"status": "already_running", "message": "Detection is already active"})
 
-        def _detect_only():
-            if not _cv_available:
-                return
-            
-            # 1. Use pre-loaded faces from system instead of reloading from disk
-            known_encodings = system.known_encodings
-            known_names     = system.known_names
-            
-            if not known_encodings:
-                print("[FaceDetect] No known faces loaded in system. Please register faces first.")
-                # We still try to open camera to set action to 'detecting'
-            else:
-                print(f"[FaceDetect] Using {len(known_encodings)} pre-loaded faces.")
-
-            # 2. Camera setup with error handling
-            cap = cv2.VideoCapture(0)
-            if not cap.isOpened():
-                print("[FaceDetect] Camera 0 failed, trying camera 1...")
-                cap = cv2.VideoCapture(1) # Fallback camera
-            
-            if not cap.isOpened():
-                print("[FaceDetect] CRITICAL: No camera found!")
-                system._activity_detecting = False
-                system.current_action = 'idle'
-                return
-
-            system.current_person  = None
-            system.current_action  = 'detecting'
-            system.current_warning = None
-
-            try:
-                print("[FaceDetect] Starting detection loop...")
-                # YE LOOP CHALTA REHNA CHAHIYE
-                while getattr(system, '_activity_detecting', False):
-                    ret, frame = cap.read()
-                    if not ret:
-                        print("[FaceDetect] Failed to read frame")
-                        time.sleep(0.1)
-                        continue
-                    
-                    # Optimization: Resize for faster processing
-                    small = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-                    rgb   = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
-                    locs  = _face_recognition_lib.face_locations(rgb)
-                    encs  = _face_recognition_lib.face_encodings(rgb, locs)
-
-                    # Too-close check
-                    system.current_warning = None
-                    for (top, right, bottom, left) in locs:
-                        if (bottom - top) > 80:
-                            system.current_warning = 'too_close'
-                            break
-
-                    matched = None
-                    if known_encodings:
-                        for enc in encs:
-                            dists = _face_recognition_lib.face_distance(known_encodings, enc)
-                            best  = int(np.argmin(dists))
-                            distance = dists[best]
-                            
-                            # Threshold improved: 0.55 is more robust than 0.5
-                            if distance < 0.55: 
-                                matched = known_names[best]
-                                print(f"[FaceDetect] Recognized: {matched} (distance: {distance:.3f})")
-                                break
-                            else:
-                                print(f"[FaceDetect] Unknown face (best distance: {distance:.3f})")
-                    
-                    system.current_person = matched
-                    system.current_action = 'recognized' if matched else 'detecting'
-                    time.sleep(0.05)
-            
-            except Exception as e:
-                print(f"[FaceDetect] Inside Thread Error: {e}")
-                traceback.print_exc()
-            
-            finally:
-                print("[FaceDetect] Stopping and cleaning up...")
-                cap.release()
-                system.current_action = 'idle'
-                system.current_person = None
-                system._activity_detecting = False # Ensure flag is reset so we can restart cleanly
-
-        # FLAG SET KARKE THREAD START KAREIN
+        # Physical camera detection disabled per user request.
+        # Ensure we set flags but do not open cv2.VideoCapture
         system._activity_detecting = True
-        t = threading.Thread(target=_detect_only, daemon=True)
-        t.start()
-        
-        return jsonify({"status": "success", "message": "Face detection started"})
+        system.current_action = 'detecting'
+        return jsonify({"status": "success", "message": "Face detection dummy started (backend camera disabled)"})
 
     except Exception as e:
         print(f"Route Error: {e}")
