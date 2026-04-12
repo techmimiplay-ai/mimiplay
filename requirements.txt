@@ -1,4 +1,3 @@
-
 flask
 flask-bcrypt
 flask-cors
@@ -13,8 +12,7 @@ twilio
 edge_tts
 gunicorn
 numpy
-opencv-python 
+opencv-python
 face_recognition
 SpeechRecognition
 pydub
-gunicorn

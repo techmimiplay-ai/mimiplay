@@ -41,20 +41,15 @@ def require_auth_token(f):
         return f(*args, **kwargs)
     return decorated
 
-import csv
-from pymongo import MongoClient
-import speech_recognition as sr
-from pydub import AudioSegment
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
-from bson.json_util import dumps 
 import logging
-import sys
 import asyncio
 import edge_tts
 import tempfile
 import base64
+import html
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -65,7 +60,6 @@ from routes.parent_routes import parent_bp
 from routes.teacher_routes import teacher_bp
 from extensions import users, attendance_collection, bcrypt, mimi_chats
 import jwt
-import base64
 
 try:
     # Prefer the face_detection module inside the face_detection/ folder
@@ -193,9 +187,6 @@ def _run_llm_startup_checks():
 
 
 _run_llm_startup_checks()
-
-# Local file to store activity results (no MongoDB needed)
-RESULTS_FILE = os.path.join(os.path.dirname(__file__), "activity_results.json")
 
 app = Flask(__name__)
 CORS(app, origins=["https://hilearn-test.com", "http://localhost:5173","https://www.hilearn-test.com"])
@@ -369,26 +360,6 @@ Examples:
 - word="blue", child_said="I don't know" -> {{"correct": false, "score": 0, "feedback": "Good try! Let's try again!", "hint": "blue"}}"""
 
 # =============================================================================
-# ACTIVITY RESULTS FILE HELPERS
-# =============================================================================
-def load_results() -> list:
-    try:
-        if os.path.exists(RESULTS_FILE):
-            with open(RESULTS_FILE, "r") as f:
-                return json.load(f)
-    except Exception:
-        pass
-    return []
-
-
-def save_results(data: list):
-    try:
-        with open(RESULTS_FILE, "w") as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        print(f"[save_results] error: {e}")
-
-# =============================================================================
 # QUESTION GENERATION PROMPTS — per activity, per difficulty
 # =============================================================================
 QUESTION_PROMPTS = {
@@ -491,25 +462,6 @@ QUESTION_PROMPTS = {
     },
 }
 
-# @app.route('/start-classroom', methods=['GET'])
-# def start_classroom():
-#     try:
-#         def run_integrated():
-#             system.run()
-#             mimi_system.run()
-
-#         thread = threading.Thread(target=run_integrated)
-#         thread.daemon = True
-#         thread.start()
-
-#         return jsonify({
-#             "status": "success",
-#             "message": "Mimi is now active and looking for faces!",
-#             "character_state": "waving"
-#         })
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
-
 @app.route('/get-attendance-logs', methods=['GET'])
 @require_auth_token
 def get_attendance_logs():
@@ -534,14 +486,13 @@ def start_classroom():
             try:
                 system.run()
             except Exception as e:
-                print(f"[FaceSystem] Error: {e}")
-                traceback.print_exc()
+                logger.error("[FaceSystem] Error: %s", e, exc_info=True)
 
         def run_mimi():
             try:
                 mimi_system.start()
             except Exception as e:
-                print(f"[MimiSystem] Error: {e}")
+                logger.error("[MimiSystem] Error: %s", e)
 
         t1 = threading.Thread(target=run_face, daemon=True)
         t2 = threading.Thread(target=run_mimi, daemon=True)
@@ -555,81 +506,6 @@ def start_classroom():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-# @app.route('/start-face-detect', methods=['GET'])
-# def start_face_detect():
-#     """
-#     Face detection for Activities — identifies WHO is in front of the camera
-#     but does NOT mark attendance or trigger mood conversation.
-#     """
-#     try:
-#         def _detect_only():
-#             if not _cv_available:
-#                 return
-#             known_dir = os.path.join(os.path.dirname(__file__), "face_detection", "known_faces")
-#             if not os.path.exists(known_dir):
-#                 known_dir = os.path.join(os.path.dirname(__file__), "known_faces")
-
-#             known_encodings, known_names = [], []
-#             if os.path.exists(known_dir):
-#                 for fname in os.listdir(known_dir):
-#                     if not fname.lower().endswith(('.jpg', '.jpeg', '.png')):
-#                         continue
-#                     img = _face_recognition_lib.load_image_file(os.path.join(known_dir, fname))
-#                     encs = _face_recognition_lib.face_encodings(img)
-#                     if encs:
-#                         known_encodings.append(encs[0])
-#                         known_names.append(os.path.splitext(fname)[0].replace('_', ' ').title())
-
-#             cap = cv2.VideoCapture(0)
-#             system.current_person  = None
-#             system.current_action  = 'detecting'
-#             system.current_warning = None
-
-#             try:
-#                 while getattr(system, '_activity_detecting', False):
-#                     ret, frame = cap.read()
-#                     if not ret:
-#                         time.sleep(0.1)
-#                         continue
-#                     small = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-#                     rgb   = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
-#                     locs  = _face_recognition_lib.face_locations(rgb)
-#                     encs  = _face_recognition_lib.face_encodings(rgb, locs)
-
-#                     # Too-close warning
-#                     system.current_warning = None
-#                     for (top, right, bottom, left) in locs:
-#                         if (bottom - top) > 80:
-#                             system.current_warning = 'too_close'
-#                             break
-
-#                     # Match face — identify only, no attendance
-#                     matched = None
-#                     for enc in encs:
-#                         if not known_encodings:
-#                             break
-#                         dists = _face_recognition_lib.face_distance(known_encodings, enc)
-#                         best  = int(np.argmin(dists))
-#                         if dists[best] < 0.6:
-#                             matched = known_names[best]
-#                             break
-#                     system.current_person = matched
-#                     system.current_action = 'recognized' if matched else 'detecting'
-#                     time.sleep(0.05)
-#             finally:
-#                 cap.release()
-#                 system.current_action  = 'idle'
-#                 system.current_person  = None
-#                 system._activity_detecting = False
-
-#         system._activity_detecting = True
-#         t = threading.Thread(target=_detect_only, daemon=True)
-#         t.start()
-#         return jsonify({"status": "success", "message": "Face detection started (no attendance)"})
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/start-face-detect', methods=['GET'])
 @require_auth_token
@@ -646,7 +522,7 @@ def start_face_detect():
         return jsonify({"status": "success", "message": "Face detection dummy started (backend camera disabled)"})
 
     except Exception as e:
-        print(f"Route Error: {e}")
+        logger.error("[start-face-detect] Route Error: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/stop-face-detect', methods=['GET'])
@@ -700,25 +576,23 @@ def get_status():
 @app.route('/start-mimi-session', methods=['GET', 'POST'])
 @require_auth_token
 def start_mimi_session():
-    student_name = request.args.get('student_name', '') or (request.get_json() or {}).get('student_name', '')
-    session_id   = request.args.get('session_id', '')   or (request.get_json() or {}).get('session_id', '')
-    
-    mimi_system.student_name = student_name   # ← YE ADD KARO
-    mimi_system.session_id   = session_id     # ← YE ADD KARO
-    
-     # ── Student ID dhundho MongoDB se ──────────────────────────
+    body         = request.get_json() or {}
+    student_name = request.args.get('student_name', '') or body.get('student_name', '')
+    session_id   = request.args.get('session_id', '')   or body.get('session_id', '')
+    raw_id       = request.args.get('student_id', '')   or body.get('student_id', '')
+
+    if not student_name or not raw_id:
+        return jsonify({"status": "error", "message": "student_name and student_id are required"}), 400
+
     try:
-        from extensions import students as students_col
-        student_doc = students_col.find_one(
-            {"name": {"$regex": f"^{student_name}$", "$options": "i"}}
-        )
-        mimi_system.student_id = student_doc["_id"] if student_doc else None
-        logger.info(f"Student ID found: {mimi_system.student_id}")
-    except Exception as e:
-        mimi_system.student_id = None
-        logger.warning(f"Could not find student_id: {e}")
-    # ────────────────────────────────────────────────────────────
-    logger.info(f"Mimi session started for: {student_name} | session: {session_id}")
+        student_oid = ObjectId(raw_id)
+    except Exception:
+        return jsonify({"status": "error", "message": "Invalid student_id"}), 400
+
+    mimi_system.student_name = student_name
+    mimi_system.session_id   = session_id
+    mimi_system.student_id   = student_oid
+    logger.info("Mimi session started for: %s | id: %s | session: %s", student_name, raw_id, session_id)
 
     # Generate personalised greeting audio
     greeting_text = f"Hi {student_name}! Great to see you. Go ahead and ask me anything."
@@ -784,17 +658,17 @@ def mimi_wake():
         if 'audio' not in request.files:
             return jsonify({"status": "error", "message": "No audio"}), 400
         audio_file = request.files['audio']
-        audio = AudioSegment.from_file(io.BytesIO(audio_file.read()))
-        wav_buffer = io.BytesIO()
-        audio.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)
-        
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_buffer) as source:
-            audio_data = recognizer.record(source)
-            text = recognizer.recognize_google(audio_data, language="en-IN").lower()
-            
-        logger.info(f"Wake check transcribed: {text}")
+        with io.BytesIO(audio_file.read()) as raw_buf:
+            audio = AudioSegment.from_file(raw_buf)
+        with io.BytesIO() as wav_buffer:
+            audio.export(wav_buffer, format="wav")
+            wav_buffer.seek(0)
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_buffer) as source:
+                audio_data = recognizer.record(source)
+                text = recognizer.recognize_google(audio_data, language="en-IN").lower()
+
+        logger.info("Wake check transcribed: %s", text[:80])
         if any(term in text for term in ['alexi', 'alexa', 'alex', 'hey alexi', 'hi alexi']):
             return jsonify({"status": "success", "wake": True, "text": text})
         return jsonify({"status": "success", "wake": False, "text": text})
@@ -812,17 +686,17 @@ def mimi_chat_audio():
         if 'audio' not in request.files:
             return jsonify({"status": "error", "message": "No audio"}), 400
         audio_file = request.files['audio']
-        audio = AudioSegment.from_file(io.BytesIO(audio_file.read()))
-        wav_buffer = io.BytesIO()
-        audio.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)
-        
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_buffer) as source:
-            audio_data = recognizer.record(source)
-            text = recognizer.recognize_google(audio_data, language="en-IN")
-            
-        logger.info(f"Audio context transcribed: {text}")
+        with io.BytesIO(audio_file.read()) as raw_buf:
+            audio = AudioSegment.from_file(raw_buf)
+        with io.BytesIO() as wav_buffer:
+            audio.export(wav_buffer, format="wav")
+            wav_buffer.seek(0)
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_buffer) as source:
+                audio_data = recognizer.record(source)
+                text = recognizer.recognize_google(audio_data, language="en-IN")
+
+        logger.info("Audio context transcribed: %s", text[:80])
         result = mimi_system.process_text(text)
         if result and result.get("text"):
             mimi_system.current_audio = _generate_tts_audio_base64(result["text"])
@@ -836,44 +710,6 @@ def mimi_chat_audio():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# @app.route('/activity-check', methods=['POST'])
-# def activity_check():
-#     """
-#     Check if child said a word correctly using LLM.
-#     Body: { word, child_said, activity_name, student_name }
-#     Returns: { result: { correct, feedback, hint } }
-#     """
-#     try:
-#         data         = request.get_json() or {}
-#         word         = data.get("word", "")
-#         child_said   = data.get("child_said", "")
-#         activity_name = data.get("activity_name", "Word Practice")
-#         student_name = data.get("student_name", "Student")
-
-#         prompt = _build_prompt(word, child_said, activity_name, student_name)
-
-#         result = None
-#         try:
-#             result = _call_openai(prompt)
-#         except Exception as e1:
-#             print(f"[activity-check] OpenAI failed: {e1}")
-#         if result is None:
-#             try:
-#                 result = _call_anthropic(prompt)
-#             except Exception as e2:
-#                 print(f"[activity-check] Anthropic failed: {e2}")
-#         if result is None:
-#             ok = child_said.lower().strip() in word.lower()
-#             result = {
-#                 "correct":  ok,
-#                 "feedback": f"Great job! {word} is correct!" if ok else f"Try again! The word is {word}",
-#                 "hint":     "" if ok else f"Say it slowly: {word}",
-#             }
-#         return jsonify({"result": result})
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
-
 @app.route('/activity-check', methods=['POST'])
 @require_auth_token
 def activity_check():
@@ -884,33 +720,32 @@ def activity_check():
     """
     try:
         data          = request.get_json() or {}
-        print(f"[activity-check] DATA RECEIVED: {data}")  # debug
 
-        word          = data.get("word", "")
-        child_said    = data.get("child_said", "")
-        activity_name = data.get("activity_name", "Word Practice")
-        student_name  = data.get("student_name", "Student")
+        word          = html.escape(data.get("word", ""))
+        child_said    = html.escape(data.get("child_said", ""))
+        activity_name = html.escape(data.get("activity_name", "Word Practice"))
+        student_name  = html.escape(data.get("student_name", "Student"))
 
-        print(f"[activity-check] word='{word}' | child_said='{child_said}'")  # debug
+        logger.info("[activity-check] word='%s'", word)
 
         prompt = _build_prompt(word, child_said, activity_name, student_name)
 
         result = None
         try:
             result = _call_openai(prompt)
-            print(f"[activity-check] OpenAI result: {result}")
+            logger.info("[activity-check] OpenAI result: %s", result)
         except Exception as e1:
-            print(f"[activity-check] OpenAI failed: {e1}")
+            logger.warning("[activity-check] OpenAI failed: %s", e1)
 
         if result is None:
             try:
                 result = _call_anthropic(prompt)
-                print(f"[activity-check] Anthropic result: {result}")
+                logger.info("[activity-check] Anthropic result: %s", result)
             except Exception as e2:
-                print(f"[activity-check] Anthropic failed: {e2}")
+                logger.warning("[activity-check] Anthropic failed: %s", e2)
 
         if result is None:
-            print("[activity-check] Both LLMs failed — using local fallback")
+            logger.warning("[activity-check] Both LLMs failed — using local fallback")
             w  = word.lower().strip()
             c  = child_said.lower().strip().rstrip('.,!? ')
             ok = (w in c) or (c in w)
@@ -920,13 +755,11 @@ def activity_check():
                 "hint":     "" if ok else f"Say it slowly: {word}",
             }
 
-        print(f"[activity-check] FINAL RESULT: {result}")
         return jsonify({"result": result})
 
     except Exception as e:
-        print(f"[activity-check] FULL ERROR: {e}")
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        logger.error("[activity-check] FULL ERROR: %s", e, exc_info=True)
+        return jsonify({"error": "An error occurred"}), 500
 
 @app.route('/generate-activity-questions', methods=['POST'])
 @require_auth_token
@@ -948,10 +781,8 @@ def generate_activity_questions():
         count        = int(data.get("count", 6))
         session_seed = data.get("session_seed", "")     # random seed from frontend
 
-        print(f"\n{'='*60}")
-        print(f"[generate-questions] REQUEST: activity={activity_id}, difficulty={difficulty}, count={count}, seed={session_seed}")
-        print(f"[generate-questions] OpenAI available: {_openai_available}, key set: {bool(OPENAI_API_KEY)}")
-        print(f"[generate-questions] Anthropic available: {_anthropic_available}, key set: {bool(ANTHROPIC_API_KEY)}")
+        logger.info("[generate-questions] REQUEST: activity=%s, difficulty=%s, count=%s", activity_id, difficulty, count)
+        logger.debug("[generate-questions] OpenAI available: %s, Anthropic available: %s", _openai_available, _anthropic_available)
 
         # Validate
         if activity_id not in QUESTION_PROMPTS:
@@ -964,7 +795,7 @@ def generate_activity_questions():
         seed_line = f"\n\nIMPORTANT: Session ID is '{session_seed}'. Generate COMPLETELY DIFFERENT questions than last time. Do NOT repeat previous answers."
         prompt = prompt_template.format(count=count) + seed_line
 
-        print(f"[generate-questions] Prompt length: {len(prompt)} chars")
+        logger.debug("[generate-questions] Prompt length: %d chars", len(prompt))
 
         # Try OpenAI first, then Anthropic
         raw = None
@@ -972,31 +803,29 @@ def generate_activity_questions():
 
         try:
             if _openai_available and OPENAI_API_KEY:
-                print("[generate-questions] Trying OpenAI...")
+                logger.info("[generate-questions] Trying OpenAI...")
                 raw = _call_openai_raw(prompt, max_tokens=1000, temperature=1.0)
                 used_provider = "OpenAI"
-                print(f"[generate-questions] OpenAI responded, raw length={len(raw)}")
-                print(f"[generate-questions] OpenAI raw (first 300): {raw[:300]}")
+                logger.debug("[generate-questions] OpenAI responded, raw length=%d", len(raw))
             else:
-                print("[generate-questions] OpenAI skipped (not available or key not set)")
+                logger.warning("[generate-questions] OpenAI skipped (not available or key not set)")
         except Exception as e1:
-            print(f"[generate-questions] OpenAI FAILED: {type(e1).__name__}: {e1}")
+            logger.error("[generate-questions] OpenAI FAILED: %s: %s", type(e1).__name__, e1)
 
         if not raw:
             try:
                 if _anthropic_available and ANTHROPIC_API_KEY:
-                    print("[generate-questions] Trying Anthropic...")
+                    logger.info("[generate-questions] Trying Anthropic...")
                     raw = _call_anthropic_raw(prompt, max_tokens=1000, temperature=1.0)
                     used_provider = "Anthropic"
-                    print(f"[generate-questions] Anthropic responded, raw length={len(raw)}")
-                    print(f"[generate-questions] Anthropic raw (first 300): {raw[:300]}")
+                    logger.debug("[generate-questions] Anthropic responded, raw length=%d", len(raw))
                 else:
-                    print("[generate-questions] Anthropic skipped (not available or key not set)")
+                    logger.warning("[generate-questions] Anthropic skipped (not available or key not set)")
             except Exception as e2:
-                print(f"[generate-questions] Anthropic FAILED: {type(e2).__name__}: {e2}")
+                logger.error("[generate-questions] Anthropic FAILED: %s: %s", type(e2).__name__, e2)
 
         if not raw:
-            print("[generate-questions] BOTH LLMs failed — returning empty (frontend will use static fallback)")
+            logger.error("[generate-questions] BOTH LLMs failed")
             return jsonify({
                 "questions": [],
                 "error": "LLM unavailable — check your API keys in app.py or environment variables"
@@ -1009,21 +838,17 @@ def generate_activity_questions():
             end   = clean.rfind(']')
             if start != -1 and end != -1 and end > start:
                 questions = json.loads(clean[start:end + 1])
-                print(f"[generate-questions] SUCCESS via {used_provider}: parsed {len(questions)} questions")
-                for i, q in enumerate(questions):
-                    print(f"  Q{i+1}: {q}")
+                logger.info("[generate-questions] SUCCESS via %s: parsed %d questions", used_provider, len(questions))
                 return jsonify({"questions": questions})
             else:
-                print(f"[generate-questions] No JSON array brackets found in response: {raw[:500]}")
+                logger.error("[generate-questions] No JSON array brackets found in response: %s", raw[:200])
         except Exception as pe:
-            print(f"[generate-questions] JSON parse error: {type(pe).__name__}: {pe}")
-            print(f"[generate-questions] Raw that failed to parse: {raw[:500]}")
+            logger.error("[generate-questions] JSON parse error: %s: %s", type(pe).__name__, pe)
 
         return jsonify({"questions": [], "error": f"Parse failed from {used_provider} — check server logs"}), 200
 
     except Exception as e:
-        print(f"[generate-questions] Unexpected error: {type(e).__name__}: {e}")
-        traceback.print_exc()
+        logger.error("[generate-questions] Unexpected error: %s: %s", type(e).__name__, e, exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1031,69 +856,70 @@ def generate_activity_questions():
 @require_auth_token
 def save_activity_result():
     try:
-        from datetime import datetime
         data = request.get_json() or {}
 
-        student_name = data.get("student_name", "Student")
+        student_name  = data.get("student_name", "Student")
         activity_name = data.get("activity_name", "Activity")
-        stars = min(5, max(0, int(data.get("stars", 0))))
-        score = int(data.get("score", 0))
+        stars         = min(5, max(0, int(data.get("stars", 0))))
+        score         = int(data.get("score", 0))
+        raw_id        = data.get("student_id", "")
 
+        # Resolve student_id to ObjectId — reject if missing or invalid
+        try:
+            student_oid = ObjectId(raw_id) if raw_id else None
+        except Exception:
+            student_oid = None
+
+        if not student_oid:
+            return jsonify({"status": "error", "message": "Valid student_id is required"}), 400
+
+        now = datetime.now(timezone.utc)
         entry = {
             "student_name":  student_name,
-            "student_id":    data.get("student_id", "student-1"),
+            "student_id":    student_oid,
             "activity_id":   data.get("activity_id", 0),
             "activity_name": activity_name,
             "stars":         stars,
             "score":         score,
-            "timestamp":     datetime.now().isoformat(),
-            "date":          datetime.now().strftime("%Y-%m-%d"),
-            "time":          datetime.now().strftime("%H:%M:%S"),
+            "timestamp":     now.isoformat(),
+            "date":          now.strftime("%Y-%m-%d"),
+            "time":          now.strftime("%H:%M:%S"),
         }
 
-        # Save to MongoDB
-        try:
-            MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))
-            db["activity_results"].insert_one(entry)
-        except Exception as e:
-            print("MongoDB not connected, skipping...", e)
-
-        # Save to local JSON
-        json_entry = {**entry, "id": int(datetime.now().timestamp() * 1000)}
-        results = load_results()
-        results.insert(0, json_entry)
-        save_results(results)
-
+        from extensions import db as mongo_db
+        mongo_db["activity_results"].insert_one(entry)
         entry.pop("_id", None)
+        entry["student_id"] = str(student_oid)  # serialize for JSON response
 
-        # Send WhatsApp to parent instantly
         try:
             from services.whatsapp_service import send_activity_result_to_parent
             send_activity_result_to_parent(student_name, activity_name, stars, score)
         except Exception as wp_err:
-            print(f"[WP] WhatsApp send failed: {wp_err}")
+            logger.warning("[WP] WhatsApp send failed: %s", wp_err)
 
         return jsonify({"status": "success", "entry": entry})
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-
 @app.route('/get-student-stars/<student_id>', methods=['GET'])
 @require_auth_token
 def get_student_stars(student_id):
-    """Return total and today's stars for a student."""
     try:
-        from datetime import datetime
-        today   = datetime.now().strftime("%a %b %d %Y")
-        results = load_results()
-        mine    = [r for r in results if r.get("student_id") == student_id]
+        from extensions import db as mongo_db
+        try:
+            student_oid = ObjectId(student_id)
+        except Exception:
+            return jsonify({"error": "Invalid student_id"}), 400
+        today = datetime.now().strftime("%Y-%m-%d")
+        mine  = list(mongo_db["activity_results"].find(
+            {"student_id": student_oid}, {"_id": 0}
+        ).sort("timestamp", -1).limit(20))
         return jsonify({
-            "student_id":   student_id,
-            "total_stars":  sum(r.get("stars", 0) for r in mine),
-            "today_stars":  sum(r.get("stars", 0) for r in mine if r.get("date") == today),
-            "results":      mine[:20],
+            "student_id":  student_id,
+            "total_stars": sum(r.get("stars", 0) for r in mine),
+            "today_stars": sum(r.get("stars", 0) for r in mine if r.get("date") == today),
+            "results":     mine,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1116,11 +942,8 @@ def stop_classroom():
 @require_auth_token
 def get_attendance():
     try:
-        attendance_file = os.path.join(os.path.dirname(__file__), "attendance.csv")
-        records = []
-        if os.path.exists(attendance_file):
-            with open(attendance_file, newline='') as f:
-                records = list(csv.DictReader(f))
+        date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
+        records = list(attendance_collection.find({"date": date}, {"_id": 0}))
         return jsonify({"status": "success", "records": records})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -1137,40 +960,6 @@ def check_attendance():
     else:
         return jsonify({"message": "not_marked"})
 
-
-# @app.route('/register-face', methods=['POST'])
-# @require_auth_token
-# def register_face():
-#     try:
-#         import cv2
-#         import face_recognition as fr
-#         data = request.get_json() or {}
-#         name = (data.get("name") or "").strip()
-#         image = data.get("image", "")
-
-#         if not name or not image:
-#             return jsonify({"status": "error", "message": "Name and Image required"}), 400
-
-#         if "," in image: image = image.split(",", 1)[1]
-#         img_bytes = base64.b64decode(image)
-#         img_array = np.frombuffer(img_bytes, dtype=np.uint8)
-#         frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-
-#         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#         encodings = fr.face_encodings(rgb, fr.face_locations(rgb))
-#         if not encodings:
-#             return jsonify({"status": "error", "message": "No face detected"}), 400
-
-#         safe_name = re.sub(r'[^a-zA-Z0-9_ ]', '', name).strip().replace(' ', '_')
-#         save_path = os.path.join(system.known_faces_dir, f"{safe_name}.jpg")
-#         cv2.imwrite(save_path, frame)
-
-#         # Hot-reload encodings
-#         system.known_encodings.append(encodings[0])
-#         system.known_names.append(safe_name)
-#         return jsonify({"status": "success", "name": safe_name})
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
 @app.route('/register-face', methods=['POST'])
 @require_auth_token
 def register_face():
@@ -1197,30 +986,37 @@ def register_face():
 
         safe_name = re.sub(r'[^a-zA-Z0-9_ ]', '', name).strip().replace(' ', '_')
 
-        # ✅ CHANGE 1: MongoDB GridFS mein save karo (local folder nahi)
-        db_client = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))
-        db = db_client["AlexiDB"]
-        fs = gridfs.GridFS(db)
+        from extensions import db as _db
+        try:
+            db_inner = _db
 
-        # Agar pehle se same naam ki file hai toh purani delete karo
-        for old_file in db.fs.files.find({"filename": f"{safe_name}.jpg"}):
-            fs.delete(old_file["_id"])
+            student_doc = db_inner["students"].find_one(
+                {"name": {"$regex": f"^{name}$", "$options": "i"}}
+            )
+            if not student_doc:
+                return jsonify({"status": "error", "message": "Student not found in database"}), 404
 
-        # JPEG bytes banaao aur GridFS mein save karo
-        _, jpeg_bytes = cv2.imencode(".jpg", frame)
-        fs.put(jpeg_bytes.tobytes(), filename=f"{safe_name}.jpg", student_name=safe_name)
+            student_id = str(student_doc["_id"])
+            filename = f"{student_id}.jpg"
 
-        # ✅ CHANGE 2: Student record mein bhi face_registered flag lagao
-        db["students"].update_one(
-            {"name": {"$regex": f"^{name}$", "$options": "i"}},
-            {"$set": {"face_registered": True}}
-        )
+            if db_inner.fs.files.find_one({"filename": filename}):
+                return jsonify({"status": "error", "message": "Face already registered for this student"}), 409
 
-        # Hot-reload encodings in memory
-        system.known_encodings.append(encodings[0])
-        system.known_names.append(safe_name)
+            fs = gridfs.GridFS(db_inner)
+            _, jpeg_bytes = cv2.imencode(".jpg", frame)
+            fs.put(jpeg_bytes.tobytes(), filename=filename, student_name=safe_name, student_id=student_id)
 
-        db_client.close()
+            db_inner["students"].update_one(
+                {"_id": student_doc["_id"]},
+                {"$set": {"face_registered": True}}
+            )
+
+            system.known_encodings.append(encodings[0])
+            system.known_names.append(safe_name)
+
+        except Exception:
+            raise
+
         return jsonify({"status": "success", "name": safe_name})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -1235,11 +1031,8 @@ def get_student_id_by_name():
         if not name:
             return jsonify({"status": "error", "message": "Name required"}), 400
 
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
-        students_col = db["students"]
-
-        # Case-insensitive search karo naam se
-        student = students_col.find_one(
+        from extensions import db as _db
+        student = _db["students"].find_one(
             {"name": {"$regex": f"^{name}$", "$options": "i"}}
         )
 
@@ -1249,11 +1042,7 @@ def get_student_id_by_name():
                 "student_id": str(student["_id"]),
                 "student_name": student.get("name", name)
             })
-        else:
-            return jsonify({
-                "status": "not_found",
-                "student_id": None
-            })
+        return jsonify({"status": "not_found", "student_id": None})
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -1271,59 +1060,30 @@ def mark_attendance():
             return jsonify({"message": "error", "reason": "name required"}), 400
 
         today = datetime.now().strftime("%Y-%m-%d")
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
-
-        # Already marked check
-        existing = db["attendance"].find_one({"name": name, "date": today})
+        from extensions import db as _db
+        existing = _db["attendance"].find_one({"name": name, "date": today})
         if existing:
             return jsonify({"message": "already_marked"})
 
-        # Students collection se real _id lo
-        student = db["students"].find_one(
+        student = _db["students"].find_one(
             {"name": {"$regex": f"^{name}$", "$options": "i"}}
         )
         student_id = student["_id"] if student else None
 
-        # Attendance save karo
-        db["attendance"].insert_one({
-            "student_id": student_id,   # ✅ Real MongoDB ObjectId
+        _db["attendance"].insert_one({
+            "student_id": student_id,
             "name":       name,
             "date":       today,
             "time":       datetime.now().strftime("%H:%M:%S"),
             "mood":       mood
         })
 
-        print(f"[mark-attendance] ✅ {name} | student_id: {student_id} | mood: {mood}")
+        logger.info("[mark-attendance] marked: %s | mood: %s", name, mood)
         return jsonify({"message": "marked"})
 
     except Exception as e:
-        print(f"[mark-attendance] ERROR: {e}")
-        return jsonify({"message": "error", "reason": str(e)}), 500  
-
-
-
-# @app.route('/speak', methods=['POST'])
-# def speak_text():
-#     import asyncio
-#     import edge_tts
-#     import tempfile
-#     import base64
-#     data = request.get_json()
-#     text = data.get('text', '')
-#     async def generate(text, path):
-#         communicate = edge_tts.Communicate(text, voice="en-IN-NeerjaNeural", rate="-10%", pitch="+15Hz")
-#         await communicate.save(path)
-#     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
-#         tmp_path = f.name
-#     loop = asyncio.new_event_loop()
-#     asyncio.set_event_loop(loop)
-#     loop.run_until_complete(generate(text, tmp_path))
-#     loop.close()
-#     with open(tmp_path, 'rb') as f:
-#         audio_data = base64.b64encode(f.read()).decode()
-#     os.remove(tmp_path)
-#     return jsonify({'audio': audio_data})
-
+        logger.error("[mark-attendance] ERROR: %s", e, exc_info=True)
+        return jsonify({"message": "error", "reason": "An error occurred"}), 500  
     
 @app.route('/process-frame', methods=['POST'])
 @require_auth_token
@@ -1381,15 +1141,21 @@ def process_frame():
             best_idx = int(np.argmin(distances))
             distance = distances[best_idx]
             
-            if distance < 0.6:#
-                name = known_names[best_idx].replace('_', ' ').title()
-                print(f"[ProcessFrame] Recognized: {name} ({distance:.3f})")
-                return jsonify({'person': name, 'status': 'recognised'})
+            if distance < 0.6:
+                matched_name = known_names[best_idx]
+                display_name = matched_name.replace('_', ' ').title()
+                # Look up student_id from DB using the matched name
+                from extensions import db as _db
+                student_doc = _db["students"].find_one(
+                    {"name": {"$regex": f"^{matched_name.replace('_', ' ')}", "$options": "i"}}
+                )
+                student_id = str(student_doc["_id"]) if student_doc else None
+                logger.info("[ProcessFrame] Recognised: %s | id: %s", display_name, student_id)
+                return jsonify({'person': display_name, 'student_id': student_id, 'status': 'recognised'})
                 
         return jsonify({'person': None, 'status': 'no_face'})
     except Exception as e:
-        print(f"[ProcessFrame] Error: {e}")
-        traceback.print_exc()
+        logger.error("[ProcessFrame] Error: %s", e, exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -1410,7 +1176,7 @@ def mimi_save_chat():
         image_url    = data.get("image_url",    "")
         # child_photo  = data.get("child_photo_base64", None)  # base64 string
 
-        now     = datetime.now()
+        now     = datetime.now(timezone.utc)
         today   = now.strftime("%Y-%m-%d")
         time_str = now.strftime("%I:%M %p")
 
@@ -1420,8 +1186,8 @@ def mimi_save_chat():
             student_doc = students_col.find_one({"name": {"$regex": f"^{student_name}$", "$options": "i"}})
             if student_doc and not student_id:
                 student_id = str(student_doc["_id"])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("[mimi-save-chat] Could not look up student: %s", e)
 
         # Ek message object banao
         message_obj = {
@@ -1453,7 +1219,8 @@ def mimi_save_chat():
             # Naya session banao
             try:
                 sid_oid = ObjectId(student_id) if student_id else None
-            except Exception:
+            except Exception as e:
+                logger.warning("[mimi-save-chat] Invalid student_id '%s': %s", student_id, e)
                 sid_oid = None
 
             mimi_chats.insert_one({

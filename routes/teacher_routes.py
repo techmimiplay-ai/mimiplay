@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
-from pymongo import MongoClient
-import os
 from bson import ObjectId
 from datetime import datetime, timedelta
-# from routes.auth_routes import token_required
+from extensions import db, bcrypt
 from routes.auth_routes import token_required, teacher_required
+import logging
 
+logger = logging.getLogger(__name__)
 teacher_bp = Blueprint('teacher_bp', __name__)
 
 # ─────────────────────────────────────────────────────────────
@@ -18,7 +18,6 @@ def get_teacher_dashboard_stats():
     try:
         teacher_id = request.args.get('teacher_id')
         today      = datetime.now().strftime("%Y-%m-%d")
-        db         = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # Teacher naam
         teacher_name = "Teacher"
@@ -67,7 +66,7 @@ def get_teacher_dashboard_stats():
         })
 
     except Exception as e:
-        print(f"[dashboard-stats] ERROR: {e}")
+        logger.error("[dashboard-stats] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -80,7 +79,6 @@ def get_teacher_dashboard_stats():
 def get_attendance_by_date():
     try:
         date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
-        db   = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         attendance_records = list(db["attendance"].find({"date": date}))
         marked_names = {r.get("name", "").lower(): r for r in attendance_records}
@@ -104,7 +102,7 @@ def get_attendance_by_date():
         return jsonify({"status": "success", "data": result, "date": date})
 
     except Exception as e:
-        print(f"[get-attendance] ERROR: {e}")
+        logger.error("[get-attendance] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -125,7 +123,6 @@ def update_attendance_manual():
         if not name:
             return jsonify({"status": "error", "message": "name required"}), 400
 
-        db       = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         existing = db["attendance"].find_one({"name": name, "date": date})
 
         if status == "absent":
@@ -158,7 +155,7 @@ def update_attendance_manual():
         return jsonify({"status": "success", "action": "updated", "time": now})
 
     except Exception as e:
-        print(f"[update-attendance] ERROR: {e}")
+        logger.error("[update-attendance] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -170,7 +167,6 @@ def update_attendance_manual():
 @teacher_required
 def get_all_students_with_stats():
     try:
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         all_students = list(db["students"].find())
         result = []
 
@@ -193,7 +189,7 @@ def get_all_students_with_stats():
 
             activity_results = list(db["activity_results"].find({
                 "$or": [
-                    {"student_id": sid},
+                    {"student_id": s["_id"]},
                     {"student_name": {"$regex": f"^{sid_name}$", "$options": "i"}},
                 ]
             }))
@@ -222,7 +218,7 @@ def get_all_students_with_stats():
         return jsonify(result)
 
     except Exception as e:
-        print(f"[all-students-with-stats] ERROR: {e}")
+        logger.error("[all-students-with-stats] ERROR: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -237,8 +233,6 @@ def get_teacher_profile():
         teacher_id = request.args.get('teacher_id')
         if not teacher_id:
             return jsonify({"status": "error", "message": "teacher_id required"}), 400
-
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         teacher = db["users"].find_one({"_id": ObjectId(teacher_id)})
         if not teacher:
             return jsonify({"status": "error", "message": "Teacher not found"}), 404
@@ -256,7 +250,7 @@ def get_teacher_profile():
         })
 
     except Exception as e:
-        print(f"[teacher-profile GET] ERROR: {e}")
+        logger.error("[teacher-profile GET] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -273,7 +267,6 @@ def update_teacher_profile():
             return jsonify({"status": "error", "message": "teacher_id required"}), 400
 
         data = request.get_json() or {}
-        db   = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         update_fields = {}
         for field, db_key in [
@@ -295,7 +288,7 @@ def update_teacher_profile():
         return jsonify({"status": "success", "message": "Profile updated"})
 
     except Exception as e:
-        print(f"[teacher-profile PUT] ERROR: {e}")
+        logger.error("[teacher-profile PUT] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -318,10 +311,8 @@ def change_teacher_password():
         if not current_password or not new_password:
             return jsonify({"status": "error", "message": "Both passwords required"}), 400
 
-        from flask_bcrypt import Bcrypt
         from extensions import bcrypt
 
-        db      = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         teacher = db["users"].find_one({"_id": ObjectId(teacher_id)})
         if not teacher:
             return jsonify({"status": "error", "message": "Teacher not found"}), 404
@@ -340,7 +331,7 @@ def change_teacher_password():
         return jsonify({"status": "success", "message": "Password changed successfully"})
 
     except Exception as e:
-        print(f"[change-password] ERROR: {e}")
+        logger.error("[change-password] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -354,7 +345,6 @@ def get_teacher_reports():
     try:
         start_date = request.args.get('start_date', (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d"))
         end_date   = request.args.get('end_date', datetime.now().strftime("%Y-%m-%d"))
-        db         = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # All activity results in date range
         all_results = list(db["activity_results"].find({
@@ -458,7 +448,7 @@ def get_teacher_reports():
         })
 
     except Exception as e:
-        print(f"[teacher-reports] ERROR: {e}")
+        logger.error("[teacher-reports] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # ─────────────────────────────────────────────────────────────
@@ -469,7 +459,6 @@ def get_teacher_reports():
 @teacher_required
 def get_activity_stats():
     try:
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         pipeline = [
             {"$group": {
@@ -501,7 +490,6 @@ def get_activity_stats():
 @teacher_required
 def get_all_parents():
     try:
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         parents = list(db["users"].find({"role": "parent"}))
         result = []
         for p in parents:

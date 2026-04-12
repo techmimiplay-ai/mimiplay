@@ -1,46 +1,14 @@
 from flask import Blueprint, request, jsonify
 from bson import ObjectId
 from datetime import datetime
-# from extensions import users, bcrypt
-from extensions import users, attendance_collection, bcrypt, students
-# from routes.auth_routes import token_required
+from extensions import users, attendance_collection, bcrypt, students, db
 from routes.auth_routes import token_required, admin_required
-
 import re
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
-
-# ============================
-# ADMIN DASHBOARD STATS
-# ============================
-# @admin_bp.route('/api/admin/dashboard-stats', methods=['GET'])
-# # @token_required
-# @admin_required
-# def dashboard_stats():
-#     try:
-#         total_teachers = users.count_documents({"role": "teacher"})
-#         total_parents = users.count_documents({"role": "parent"})
-#         total_students = students.count_documents({})
-
-#         pending_approvals = users.count_documents({"status": "pending"})
-
-#         active_today = attendance_collection.count_documents({
-#             "date": datetime.now().strftime("%Y-%m-%d")
-#         })
-
-#         return jsonify({
-#             "totalTeachers": total_teachers,
-#             "totalParents": total_parents,
-#             "totalStudents": total_students,
-#             "pendingApprovals": pending_approvals,
-#             "activeToday": active_today,
-#             "systemHealth": "Excellent"
-#         })
-
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
 
 # ============================
 # ADMIN DASHBOARD STATS
@@ -49,9 +17,6 @@ admin_bp = Blueprint("admin", __name__)
 @admin_required
 def dashboard_stats():
     try:
-        from pymongo import MongoClient
-        import os
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         total_teachers    = db["users"].count_documents({"role": "teacher"})
         total_parents     = db["users"].count_documents({"role": "parent"})
@@ -379,34 +344,20 @@ def edit_student(id):
 def delete_student(id):
     try:
         import gridfs
-        from pymongo import MongoClient
 
-        # Pehle student ka naam lo
         student = students.find_one({"_id": ObjectId(id)})
         if not student:
             return jsonify({"msg": "Student not found"}), 404
 
-        student_name = student.get("name", "")
-        safe_name = re.sub(r'[^a-zA-Z0-9_ ]', '', student_name).strip().replace(' ', '_')
-
-        # ✅ GridFS se face image delete karo
-        MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
-        db_client = MongoClient(MONGO_URI)
-        db = db_client["AlexiDB"]
         fs = gridfs.GridFS(db)
-
-        for file_doc in db.fs.files.find({"filename": f"{safe_name}.jpg"}):
+        for file_doc in db.fs.files.find({"filename": f"{id}.jpg"}):
             fs.delete(file_doc["_id"])
-            print(f"[DeleteStudent] Face image deleted for: {safe_name}")
 
-        db_client.close()
-
-        # Student record delete karo
         students.delete_one({"_id": ObjectId(id)})
 
         return jsonify({"msg": "Student deleted successfully"})
     except Exception as e:
-        print(f"[DeleteStudent] Error: {e}")
+        logger.error("[DeleteStudent] Error: %s", e, exc_info=True)
         return jsonify({"msg": "Delete failed", "error": str(e)}), 500
 
 # ============================
@@ -466,9 +417,6 @@ def get_skills_config():
 @token_required
 def get_class_leaderboard():
     try:
-        from pymongo import MongoClient
-        import os
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # Aggregate total stars per student from activity_results
         pipeline = [

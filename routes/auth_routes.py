@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import jwt
 from config import SECRET
 from extensions import users, bcrypt
@@ -7,22 +7,34 @@ from functools import wraps
 
 auth_bp = Blueprint("auth", __name__)
 
+JWT_EXPIRY_HOURS = 24
+
+
+def _make_token(payload: dict) -> str:
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS)
+    return jwt.encode(payload, SECRET, algorithm="HS256")
+
 @auth_bp.route('/api/register', methods=['POST'])
 def register():
-    data = request.json
+    data = request.get_json() or {}
+
+    required = ["fullName", "email", "phone", "role", "password"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"msg": f"Missing fields: {', '.join(missing)}"}), 400
 
     if users.find_one({"email": data["email"]}):
         return jsonify({"msg": "Email already exists"}), 400
 
     user = {
-        "name": data["fullName"],
-        "email": data["email"],
-        "phone": data["phone"],
-        "school": data.get("school"),
-        "role": data["role"],
-        "password": bcrypt.generate_password_hash(data["password"]).decode(),
-        "status": "pending",
-        "created_at": datetime.utcnow()
+        "name":       data["fullName"],
+        "email":      data["email"],
+        "phone":      data["phone"],
+        "school":     data.get("school"),
+        "role":       data["role"],
+        "password":   bcrypt.generate_password_hash(data["password"]).decode(),
+        "status":     "pending",
+        "created_at": datetime.now(timezone.utc)
     }
 
     users.insert_one(user)
@@ -31,37 +43,22 @@ def register():
 
 @auth_bp.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.json or {}
 
-    if data["email"] == "admin@alexi.com" and data["password"] == "admin123":
-        token = jwt.encode(
-            {"id": "admin_fixed", "role": "admin"},
-            SECRET,
-            algorithm="HS256"
-        )
-        return jsonify({"token": token, "role": "admin", "user_id": "admin_fixed"})
+    user = users.find_one({"email": data.get("email")})
 
-    user = users.find_one({"email": data["email"]})
-
-    if not user:
+    if not user or not bcrypt.check_password_hash(user["password"], data.get("password", "")):
         return jsonify({"msg": "Invalid credentials"}), 401
 
-    if not bcrypt.check_password_hash(user["password"], data["password"]):
-        return jsonify({"msg": "Invalid credentials"}), 401
-
-    if user["status"] != "approved":
+    if user["role"] != "admin" and user["status"] != "approved":
         return jsonify({"msg": "Waiting for approval"}), 403
 
-    token = jwt.encode(
-        {"id": str(user["_id"]), "role": user["role"]},
-        SECRET,
-        algorithm="HS256"
-    )
+    token = _make_token({"id": str(user["_id"]), "role": user["role"]})
 
     return jsonify({
-        "token": token, 
+        "token": token,
         "role": user["role"],
-        "user_id": str(user["_id"]) # Ye line miss thi!
+        "user_id": str(user["_id"])
     })
 
 

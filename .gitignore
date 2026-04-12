@@ -1,3 +1,8 @@
+# Sensitive face data
+face_detection/known_faces/
+face_detection/attendance.csv
+face_detection/*.log
+
 # Logs
 logs
 *.log

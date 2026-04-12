@@ -1,6 +1,10 @@
 from twilio.rest import Client
 from datetime import datetime
-from pymongo import MongoClient
+import os
+import logging
+from extensions import users, attendance_collection
+
+logger = logging.getLogger(__name__)
 
 # Twilio credentials
 ACCOUNT_SID = "AC792e0c5cc48057e1f3fc3c516a202a58"
@@ -8,15 +12,6 @@ AUTH_TOKEN = "f1be5b629caed03aba53fa795b2907f4"
 TWILIO_NUMBER = "whatsapp:+14155238886"
 
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
-
-import os
-
-# Mongo connection (same as app.py)
-MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
-mongo = MongoClient(MONGO_URI)
-db = mongo["AlexiDB"]
-users = db["users"]
-attendance_collection = db["attendance"]
 
 
 # ================================
@@ -31,7 +26,7 @@ def send_whatsapp(number, message):
         )
         return True
     except Exception as e:
-        print("WhatsApp error:", e)
+        logger.error("WhatsApp error: %s", e)
         return False
 
 def send_test_message():
@@ -42,11 +37,11 @@ def send_test_message():
             body="🔥 TEST MESSAGE - Alexi WhatsApp working!"
         )
 
-        print("Message SID:", message.sid)
+        logger.info("Message SID: %s", message.sid)
         return {"success": True, "sid": message.sid}
 
     except Exception as e:
-        print("ERROR:", e)
+        logger.error("[send_test] ERROR: %s", e)
         return {"success": False, "error": str(e)}
 
 # ================================
@@ -110,12 +105,12 @@ def send_activity_result_to_parent(student_name, activity_name, stars, score):
         })
 
         if not parent:
-            print(f"[WP] No parent found for student: {student_name}")
+            logger.warning("[WP] No parent found for student: %s", student_name)
             return False
 
         parent_number = parent.get("phone")
         if not parent_number:
-            print(f"[WP] No phone number for parent of: {student_name}")
+            logger.warning("[WP] No phone number for parent of: %s", student_name)
             return False
 
         stars_emoji = "⭐" * int(stars)
@@ -132,9 +127,9 @@ Keep learning! 🚀
 *Alexi Smart Learning*"""
 
         result = send_whatsapp(parent_number, msg)
-        print(f"[WP] Report sent to {parent_number}: {result}")
+        logger.info("[WP] Report sent to %s: %s", parent_number[-4:], result)
         return result
 
     except Exception as e:
-        print(f"[WP] Error sending activity result: {e}")
+        logger.error("[WP] Error sending activity result: %s", e)
         return False

@@ -1,68 +1,11 @@
-# from flask import Blueprint, jsonify
-# from bson import ObjectId
-# from extensions import students, users
-
-# @admin_bp.route('/api/parent/my-children/<parent_id>', methods=['GET'])
-# def get_parent_children(parent_id):
-#     try:
-#         # 1. Parent ko dhoondo
-#         parent = users.find_one({"_id": ObjectId(parent_id), "role": "parent"})
-#         if not parent:
-#             return jsonify({"msg": "Parent not found"}), 404
-
-#         # 2. Parent ke pass jo bachhon ki IDs hain unka data nikalo
-#         child_ids = parent.get("children_ids", [])
-#         # Convert string IDs to ObjectIds if stored as strings
-#         query_ids = [ObjectId(cid) for cid in child_ids]
-        
-#         my_students = list(students.find({"_id": {"$in": query_ids}}))
-
-#         formatted = []
-#         for s in my_students:
-#             formatted.append({
-#                 "id": str(s["_id"]),
-#                 "name": s.get("name"),
-#                 "class": s.get("class"),
-#                 "roll_number": s.get("roll_number")
-#             })
-
-#         return jsonify(formatted)
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
-# parent_bp = Blueprint('parent_bp', __name__)
-
-# @parent_bp.route('/api/parent/my-children/<parent_id>', methods=['GET'])
-# def get_parent_children(parent_id):
-#     try:
-#         from bson import ObjectId
-#         # Seedha students collection mein dhundo jinka parent_id ye hai
-#         # Kyuki aapke screenshot mein student document mein parent_id field hai
-#         my_students = list(students.find({"parent_id": ObjectId(parent_id)}))
-
-#         formatted = []
-#         for s in my_students:
-#             formatted.append({
-#                 "id": str(s["_id"]),
-#                 "name": s.get("name", "Unknown"),
-#                 "class": s.get("class", "N/A"),
-#                 "roll_number": s.get("roll_number", "N/A"),
-#                 # Initial nikalne ke liye avatar logic frontend handle kar lega
-#             })
-
-#         print(f"Found {len(formatted)} children for parent {parent_id}")
-#         return jsonify(formatted), 200
-#     except Exception as e:
-        # return jsonify({"error": str(e)}), 500
-
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from datetime import datetime
-import os
-from pymongo import MongoClient
-from extensions import students, users
+from extensions import students, users, db
 from routes.auth_routes import token_required
+import logging
 
+logger = logging.getLogger(__name__)
 parent_bp = Blueprint('parent_bp', __name__)
 
 # ── Existing route — rakho jaise hai ────────────────────────
@@ -79,7 +22,7 @@ def get_parent_children(parent_id):
                 "class":       s.get("class",        "N/A"),
                 "roll_number": s.get("roll_number",  "N/A"),
             })
-        print(f"Found {len(formatted)} children for parent {parent_id}")
+        logger.info("Found %d children for parent %s", len(formatted), parent_id)
         return jsonify(formatted), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -93,8 +36,6 @@ def get_child_data():
         parent_id = request.args.get('parent_id')
         if not parent_id:
             return jsonify({"status": "error", "message": "parent_id required"}), 400
-
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # Parent dhundo
         parent = db["users"].find_one({"_id": ObjectId(parent_id)})
@@ -114,7 +55,7 @@ def get_child_data():
 
         today = datetime.now().strftime("%Y-%m-%d")
 
-        print(f"[child-data] Student _id: {student['_id']} | child_name: {child_name} | today: {today}")
+        logger.debug("[child-data] Student _id: %s | child_name: %s | today: %s", student['_id'], child_name, today)
 
 
         # ✅ student_id SE check karo — naam case mismatch problem nahi aayegi
@@ -131,9 +72,9 @@ def get_child_data():
             ]
         })
 
-        print(f"[child-data] Attendance found: {attendance is not None}")
+        logger.debug("[child-data] Attendance found: %s", attendance is not None)
         if attendance:
-            print(f"[child-data] Attendance record: {attendance}")
+            logger.debug("[child-data] Attendance record: %s", attendance)
         return jsonify({
             "status": "success",
             "student": {
@@ -146,7 +87,7 @@ def get_child_data():
         })
 
     except Exception as e:
-        print(f"[child-data] ERROR: {e}")
+        logger.error("[child-data] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -159,12 +100,15 @@ def get_child_stars():
         if not student_id:
             return jsonify({"status": "error", "message": "student_id required"}), 400
 
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         today = datetime.now().strftime("%Y-%m-%d")
 
-        # Activity results fetch karo
+        try:
+            student_oid = ObjectId(student_id)
+        except Exception:
+            return jsonify({"status": "error", "message": "Invalid student_id"}), 400
+
         results = list(db["activity_results"].find(
-            {"student_id": student_id}
+            {"student_id": student_oid}
         ).sort("timestamp", -1).limit(50))
 
         formatted = []
@@ -192,7 +136,7 @@ def get_child_stars():
         })
 
     except Exception as e:
-        print(f"[child-stars] ERROR: {e}")
+        logger.error("[child-stars] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -203,8 +147,6 @@ def check_child_attendance():
         student_id = request.args.get('student_id')
         name       = request.args.get('name', '')
         today      = datetime.now().strftime("%Y-%m-%d")
-
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         # ObjectId banana try karo
         try:
@@ -223,7 +165,7 @@ def check_child_attendance():
 
         attendance = db["attendance"].find_one(query)
 
-        print(f"[check-attendance] name={name} | id={student_id} | present={attendance is not None}")
+        logger.debug("[check-attendance] name=%s | present=%s", name, attendance is not None)
 
         return jsonify({
             "status":  "success",
@@ -231,7 +173,7 @@ def check_child_attendance():
         })
 
     except Exception as e:
-        print(f"[check-attendance] ERROR: {e}")
+        logger.error("[check-attendance] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "present": False}), 500
 
 
@@ -242,8 +184,6 @@ def get_parent_profile():
         parent_id = request.args.get('parent_id')
         if not parent_id:
             return jsonify({"status": "error", "message": "parent_id required"}), 400
-
-        db = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
         parent = db["users"].find_one({"_id": ObjectId(parent_id)})
         if not parent:
             return jsonify({"status": "error", "message": "Parent not found"}), 404
@@ -271,7 +211,6 @@ def update_parent_profile():
             return jsonify({"status": "error", "message": "parent_id required"}), 400
 
         data = request.get_json() or {}
-        db   = MongoClient(os.environ.get("MONGODB_URI", "mongodb://localhost:27017/"))["AlexiDB"]
 
         update_fields = {}
         if data.get("name"):       update_fields["name"]       = data["name"]

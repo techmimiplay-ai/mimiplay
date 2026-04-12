@@ -1,11 +1,12 @@
 import os
+import html
 import time
 import json
 import threading
 import requests
 import logging
 from extensions import mimi_chats
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     from face_detection.face_detection import SpeechManager, SpeechRecognizer
@@ -13,7 +14,7 @@ except Exception:
     try:
         from face_detection_with_sentiment_analysis import SpeechManager, SpeechRecognizer
     except Exception:
-        print("Face module skipped")
+        logger.warning("Face module skipped — running without speech/mic support")
         SpeechManager = None
         SpeechRecognizer = None
 
@@ -74,7 +75,7 @@ class MimiLLMSession:
             return None
         logger.info("_call_openai: calling OpenAI (key len=%d)", len(api_key))
         system_instructions = (
-            "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. Your goal is to educate and inform children in a simple, fun way.\n\n"
+            "ROLE: You are Mimi, a friendly, virtual friend for children aged 3 to 5. Your goal is to educate and inform children in a simple, fun way.\n\n"
     "TONE & LANGUAGE: Speak in ENGLISH ONLY. No Hindi words at all. Use vocabulary a preschooler knows. Keep responses to 1-2 short sentences. Never ask questions.\n\n"
     "RULES & SAFETY: Never mention ghosts, monsters, death, violence, sickness, politics, or adult topics. If asked about a scary topic, pivot to something happy. If child sounds sad, give gentle emotional support. Always be encouraging and upbeat.\n\n"
     "RESPONSE FORMAT: Always reply with a JSON object only. Keys: text, image_search_term, youtube_search_term.\n"
@@ -139,9 +140,13 @@ class MimiLLMSession:
         
         # Anthropic instructions
         anthropic_instructions = (
-            "ROLE: You are Mimi, a friendly, magical animal friend for children aged 3 to 5. "
-            "Speak mostly in simple English with only 1-2 Hindi words, use very simple words, keep tone happy and encouraging. Keep replies 1-2 short sentences.\n\n"
-            "OUTPUT: Reply ONLY with a JSON object {text, image_url, yt_video} where 'text' is 1-2 short sentences for ages 3-5."
+            "ROLE: You are Mimi, a friendly, virtual friend for children aged 3 to 5. "
+            "Speak in simple English only. Keep replies 1-2 short sentences.\n\n"
+            "OUTPUT: Reply ONLY with a JSON object with keys: text, image_search_term, youtube_search_term. "
+            "- text: 1-2 short simple sentences in English only.\n"
+            "- image_search_term: short Wikimedia Commons search term (e.g. 'African elephant').\n"
+            "- youtube_search_term: short YouTube search term for a kids song/video (e.g. 'elephant song for kids').\n"
+            "Example: {\"text\": \"Elephants are big animals!\", \"image_search_term\": \"African elephant\", \"youtube_search_term\": \"elephant song for kids\"}"
         )
 
         try:
@@ -189,7 +194,7 @@ class MimiLLMSession:
 
 
     def _fetch_wikimedia_image(self, search_term):
-        print('WIKIMEDIA SEARCHING:', search_term)
+        logger.info('WIKIMEDIA SEARCHING: %s', search_term)
         try:
             import requests as req
             r = req.get(
@@ -204,7 +209,7 @@ class MimiLLMSession:
                 if url:
                     return url
         except Exception as e:
-            print('Wikimedia error:', e)
+            logger.error('Wikimedia error: %s', e)
         return None
     def _parse_json_response(self, text):
         if not text:
@@ -223,7 +228,7 @@ class MimiLLMSession:
     def _fetch_youtube_video_url(self, search_term):
         api_key = self.youtube_key
         if not api_key:
-            print("YouTube: YOUTUBE_API_KEY not set — add it to .env to enable videos")
+            logger.warning("YouTube: YOUTUBE_API_KEY not set — add it to .env to enable videos")
             return None
         q = search_term + ("" if "for kids" in search_term.lower() else " for kids")
         try:
@@ -247,9 +252,9 @@ class MimiLLMSession:
                 if id_block.get("kind") == "youtube#video":
                     video_id = id_block.get("videoId", "")
                     if video_id:
-                        return f"https://www.youtube.com/watch?v={video_id}"
+                        return f"https://www.youtube.com/embed/{video_id}"
         except Exception as e:
-            print("YouTube API error:", e)
+            logger.error("YouTube API error: %s", e)
         return None
 
     def _get_llm_response_json(self, user_text):
@@ -301,20 +306,18 @@ class MimiLLMSession:
                 "provider": "openai" if self.openai_key else "anthropic",
             }
         search = data.get("image_search_term") or ""
-        print("WIKIMEDIA SEARCH:", search)
+        logger.info("WIKIMEDIA SEARCH: %s", search)
         image_url = self._fetch_wikimedia_image(search) if search else None
-        print("WIKIMEDIA RESULT:", image_url)
+        logger.info("WIKIMEDIA RESULT: %s", image_url)
         yt_search = data.get("youtube_search_term") or ""
-        # Ensure we always have a search term — fall back to image term or response text
         if not yt_search or yt_search.lower() in ("null", "none"):
-            yt_search = data.get("image_search_term") or ""
+            yt_search = search
         if not yt_search:
             yt_search = " ".join((data.get("text") or "").split()[:4])
-        # Fetch an embeddable video ID via YouTube Data API (requires YOUTUBE_API_KEY in .env)
         yt_video = self._fetch_youtube_video_url(yt_search) if yt_search else None
-        print("YOUTUBE URL:", yt_video)
+        logger.info("YOUTUBE URL: %s", yt_video)
         return {
-            "text": data.get("text") or "",
+            "text": html.escape(data.get("text") or ""),
             "image_url": image_url,
             "yt_video": yt_video,
             "provider": "openai" if self.openai_key else "anthropic",
@@ -335,12 +338,10 @@ class MimiLLMSession:
                             logger.info('Heard (wake loop): %s', heard)
                             if 'alexi' in heard or 'alexa' in heard or 'hey alexi' in heard:
                                 logger.info('Wake word detected — starting interactive session')
-                                self.session_ended = False  # reset for new student
                                 self.session_ended = False
                                 self._interactive_loop()
-                                # After interactive loop ends, continue waiting for next session
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug('Wake word recognition error: %s', e)
                 else:
                     time.sleep(0.5)
             except Exception as e:
@@ -357,7 +358,7 @@ class MimiLLMSession:
             if self._stop:
                 self.current_action = 'idle'
                 self.current_text   = None
-                print("[Mimi] Session stopped by user.")
+                logger.info("[Mimi] Session stopped by user.")
                 return
             # listen for a user query
             self.current_action = 'listening'
@@ -405,7 +406,7 @@ class MimiLLMSession:
 
             # ── MongoDB mein save karo ──────────────────────────
             try:
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 mimi_chats.update_one(
                     {
                         "session_id":   self.session_id,
@@ -430,56 +431,34 @@ class MimiLLMSession:
                     },
                     upsert=True
                 )
-                logger.info(f"[DB] Saved Q&A for '{self.student_name}': {user_text[:40]}")
+                logger.info("[DB] Saved Q&A for '%s': %s", self.student_name, user_text[:40])
             except Exception as db_err:
-                logger.error(f"[DB] Save error: {db_err}")
+                logger.error("[DB] Save error: %s", db_err)
             # ────────────────────────────────────────────────────
 
             # speak the text
             if self.current_text:
                 self.current_action = 'speaking'
                 self.speech.speak_and_wait(self.current_text)
-                time.sleep(0.5)  # small pause after speaking before listening again
+                time.sleep(0.5)
 
-            # show result on screen for a short while
             self.current_action = 'showing'
             time.sleep(1)
 
-    # def process_text(self, user_text):
-    #     """Processes a single text input from the frontend."""
-    #     self.current_action = 'thinking'
-    #     self.current_text = 'Thinking...'
-        
-    #     try:
-    #         llm_json = self._get_llm_response_json(user_text)
-            
-    #         # update instance fields for polling
-    #         self.current_text = llm_json.get('text')
-    #         self.current_image = llm_json.get('image_url')
-    #         self.current_video = llm_json.get('yt_video')
-    #         self.current_action = 'speaking'
-            
-    #         return llm_json
-    #     except Exception as e:
-    #         logger.error("Error in process_text: %s", e)
-    #         return {"text": "Sorry, I encountered an error while thinking.", "error": str(e)}
     def process_text(self, user_text):
-    # """Processes a single text input from the frontend."""
         self.current_action = 'thinking'
         self.current_text = 'Thinking...'
 
         try:
             llm_json = self._get_llm_response_json(user_text)
 
-            # update instance fields for polling
             self.current_text   = llm_json.get('text')
             self.current_image  = llm_json.get('image_url')
             self.current_video  = llm_json.get('yt_video')
             self.current_action = 'speaking'
 
-            # ── MongoDB mein save karo (return se PEHLE) ──────────
             try:
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 mimi_chats.update_one(
                     {
                         "session_id":   self.session_id,
@@ -503,10 +482,9 @@ class MimiLLMSession:
                     },
                     upsert=True
                 )
-                logger.info(f"[DB] Saved Q&A for '{self.student_name}': {user_text[:40]}")
+                logger.info("[DB] Saved Q&A for '%s': %s", self.student_name, user_text[:40])
             except Exception as db_err:
-                logger.error(f"[DB] Save error: {db_err}")
-            # ──────────────────────────────────────────────────────
+                logger.error("[DB] Save error: %s", db_err)
 
             return llm_json
 
