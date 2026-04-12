@@ -28,37 +28,6 @@ import traceback
 import requests
 from pymongo import MongoClient
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-    logger.warning("cv2 skipped")
-
-try:
-    import numpy as np
-except ImportError:
-    np = None
-    logger.warning("numpy skipped")
-
-try:
-    import pyttsx3
-except ImportError:
-    pyttsx3 = None
-    logger.warning("pyttsx3 skipped")
-
-try:
-    import speech_recognition as sr
-except ImportError:
-    sr = None
-    logger.warning("speech_recognition skipped")
-
-try:
-    import face_recognition
-except ImportError:
-    face_recognition = None
-    logger.warning("face_recognition skipped")
-
-
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
@@ -101,6 +70,36 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+    logger.warning("cv2 skipped")
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+    logger.warning("numpy skipped")
+
+try:
+    import pyttsx3
+except ImportError:
+    pyttsx3 = None
+    logger.warning("pyttsx3 skipped")
+
+try:
+    import speech_recognition as sr
+except ImportError:
+    sr = None
+    logger.warning("speech_recognition skipped")
+
+try:
+    import face_recognition
+except ImportError:
+    face_recognition = None
+    logger.warning("face_recognition skipped")
 
 # ============================================================================
 # ATTENDANCE MANAGER
