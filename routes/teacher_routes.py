@@ -335,7 +335,7 @@ def change_teacher_password():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-        # ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # GET /api/teacher/reports
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/reports', methods=['GET'])

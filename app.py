@@ -1136,23 +1136,29 @@ def process_frame():
         locations = fr.face_locations(rgb)
         encodings = fr.face_encodings(rgb, locations)
         
+        RECOGNITION_THRESHOLD = 0.45
+
         for enc in encodings:
             distances = fr.face_distance(known_encs, enc)
             best_idx = int(np.argmin(distances))
-            distance = distances[best_idx]
-            
-            if distance < 0.6:
-                matched_name = known_names[best_idx]
-                display_name = matched_name.replace('_', ' ').title()
-                # Look up student_id from DB using the matched name
-                from extensions import db as _db
-                student_doc = _db["students"].find_one(
-                    {"name": {"$regex": f"^{matched_name.replace('_', ' ')}", "$options": "i"}}
-                )
-                student_id = str(student_doc["_id"]) if student_doc else None
-                logger.info("[ProcessFrame] Recognised: %s | id: %s", display_name, student_id)
-                return jsonify({'person': display_name, 'student_id': student_id, 'status': 'recognised'})
-                
+            distance = float(distances[best_idx])
+
+            logger.info("[ProcessFrame] Best distance: %.4f (threshold: %.2f)", distance, RECOGNITION_THRESHOLD)
+
+            if distance > RECOGNITION_THRESHOLD:
+                logger.info("[ProcessFrame] Unknown face rejected (distance=%.4f)", distance)
+                return jsonify({'person': None, 'status': 'unknown', 'distance': distance})
+
+            matched_name = known_names[best_idx]
+            display_name = matched_name.replace('_', ' ').title()
+            from extensions import db as _db
+            student_doc = _db["students"].find_one(
+                {"name": {"$regex": f"^{matched_name.replace('_', ' ')}", "$options": "i"}}
+            )
+            student_id = str(student_doc["_id"]) if student_doc else None
+            logger.info("[ProcessFrame] Recognised: %s | id: %s | distance: %.4f", display_name, student_id, distance)
+            return jsonify({'person': display_name, 'student_id': student_id, 'status': 'recognised', 'distance': distance})
+
         return jsonify({'person': None, 'status': 'no_face'})
     except Exception as e:
         logger.error("[ProcessFrame] Error: %s", e, exc_info=True)

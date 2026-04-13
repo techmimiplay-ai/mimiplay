@@ -332,13 +332,6 @@ def edit_student(id):
 
     return jsonify({"msg": "Student updated successfully"})
 
-# @admin_bp.route('/api/admin/delete-student/<id>', methods=['DELETE'])
-# # @token_required
-# @admin_required
-# def delete_student(id):
-#     students.delete_one({"_id": ObjectId(id)})
-#     return jsonify({"msg": "Student deleted successfully"})
-
 @admin_bp.route('/api/admin/delete-student/<id>', methods=['DELETE'])
 @admin_required
 def delete_student(id):

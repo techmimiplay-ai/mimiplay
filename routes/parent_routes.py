@@ -227,3 +227,40 @@ def update_parent_profile():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@parent_bp.route('/api/parent/change-password', methods=['PUT'])
+@token_required
+def change_parent_password():
+    try:
+        parent_id = request.args.get('parent_id')
+        if not parent_id:
+            return jsonify({"status": "error", "message": "parent_id required"}), 400
+
+        data = request.get_json() or {}
+        current_password = data.get("currentPassword", "")
+        new_password     = data.get("newPassword", "")
+
+        if not current_password or not new_password:
+            return jsonify({"status": "error", "message": "Both passwords required"}), 400
+
+        from extensions import bcrypt
+
+        parent = db["users"].find_one({"_id": ObjectId(parent_id)})
+        if not parent:
+            return jsonify({"status": "error", "message": "Parent not found"}), 404
+
+        if not bcrypt.check_password_hash(parent.get("password", ""), current_password):
+            return jsonify({"status": "error", "message": "Current password is incorrect"}), 400
+
+        new_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        db["users"].update_one(
+            {"_id": ObjectId(parent_id)},
+            {"$set": {"password": new_hash}}
+        )
+
+        return jsonify({"status": "success", "message": "Password changed successfully"})
+
+    except Exception as e:
+        logger.error("[change-password] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
