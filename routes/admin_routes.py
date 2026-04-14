@@ -126,6 +126,21 @@ def approve_user(id):
         {"$set": {"status": "approved"}}
     )
     return jsonify({"msg": "User approved"})
+# ============================
+# REJECT USER
+# ============================
+@admin_bp.route('/api/admin/reject/<id>', methods=['DELETE'])
+# @token_required
+@admin_required
+def reject_user(id):
+    try:
+        result = users.delete_one({"_id": ObjectId(id)})
+        if result.deleted_count == 0:
+            return jsonify({"msg": "User not found"}), 404
+        return jsonify({"msg": "User rejected successfully"})
+    except Exception as e:
+        logger.error("[RejectUser] Error: %s", e, exc_info=True)
+        return jsonify({"msg": "Error rejecting user", "error": str(e)}), 500
 
 
 @admin_bp.route('/api/admin/all-users')
