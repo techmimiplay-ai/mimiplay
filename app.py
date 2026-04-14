@@ -42,6 +42,8 @@ def require_auth_token(f):
     return decorated
 
 import io
+import speech_recognition as sr
+from pydub import AudioSegment
 from datetime import datetime, timezone
 from bson import ObjectId
 import logging
