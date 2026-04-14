@@ -395,9 +395,15 @@ class MimiLLMSession:
                 continue
 
             # send to LLM
-            self.current_action = 'speaking'
+            self.current_action = 'thinking'
             self.current_text = 'Thinking...'
-            llm_json = self._get_llm_response_json(user_text)
+            try:
+                llm_json = self._get_llm_response_json(user_text)
+            except Exception as e:
+                logger.error("LLM error: %s", e)
+                self.current_action = 'speaking'
+                self.speech.speak_and_wait("I'm having trouble. Please try again.")
+                continue
 
             # update public fields
             self.current_text = llm_json.get('text')
@@ -455,7 +461,7 @@ class MimiLLMSession:
             self.current_text   = llm_json.get('text')
             self.current_image  = llm_json.get('image_url')
             self.current_video  = llm_json.get('yt_video')
-            self.current_action = 'speaking'
+            self.current_action = 'done'
 
             try:
                 now = datetime.now(timezone.utc)
