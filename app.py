@@ -254,7 +254,7 @@ def speak_text():
     audio_data = _generate_tts_audio_base64(text)
     if not audio_data:
         return jsonify({'error': 'Failed to generate audio'}), 500
-    return jsonify({'audio': audio_data})
+    return jsonify({'audio': audio_data, 'text': text})
 
 
 # System initialize karein
@@ -712,56 +712,100 @@ def mimi_chat_audio():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+def _evaluate_activity_answer(word, child_said, activity_name, student_name):
+    """Helper to judge an answer using LLMs with local fallback."""
+    logger.info("[activity-eval] word='%s' child_said='%s'", word, child_said)
+    prompt = _build_prompt(word, child_said, activity_name, student_name)
+
+    result = None
+    try:
+        result = _call_openai(prompt)
+        logger.info("[activity-eval] OpenAI result: %s", result)
+    except Exception as e1:
+        logger.warning("[activity-eval] OpenAI failed: %s", e1)
+
+    if result is None:
+        try:
+            result = _call_anthropic(prompt)
+            logger.info("[activity-eval] Anthropic result: %s", result)
+        except Exception as e2:
+            logger.warning("[activity-eval] Anthropic failed: %s", e2)
+
+    if result is None:
+        logger.warning("[activity-eval] Both LLMs failed — using local fallback")
+        w  = word.lower().strip()
+        c  = child_said.lower().strip().rstrip('.,!? ')
+        ok = (w in c) or (c in w)
+        result = {
+            "correct":  ok,
+            "feedback": f"Great job! {word} is correct! 🌟" if ok else f"Try again! The word is {word}",
+            "hint":     "" if ok else f"Say it slowly: {word}",
+        }
+    return result
+
 @app.route('/activity-check', methods=['POST'])
 @require_auth_token
 def activity_check():
-    """
-    Check if child said a word correctly using LLM.
-    Body: { word, child_said, activity_name, student_name }
-    Returns: { result: { correct, feedback, hint } }
-    """
+    """Check if child said a word correctly using LLM (Text-only version)."""
     try:
         data          = request.get_json() or {}
-
         word          = html.escape(data.get("word", ""))
         child_said    = html.escape(data.get("child_said", ""))
         activity_name = html.escape(data.get("activity_name", "Word Practice"))
         student_name  = html.escape(data.get("student_name", "Student"))
 
-        logger.info("[activity-check] word='%s'", word)
-
-        prompt = _build_prompt(word, child_said, activity_name, student_name)
-
-        result = None
-        try:
-            result = _call_openai(prompt)
-            logger.info("[activity-check] OpenAI result: %s", result)
-        except Exception as e1:
-            logger.warning("[activity-check] OpenAI failed: %s", e1)
-
-        if result is None:
-            try:
-                result = _call_anthropic(prompt)
-                logger.info("[activity-check] Anthropic result: %s", result)
-            except Exception as e2:
-                logger.warning("[activity-check] Anthropic failed: %s", e2)
-
-        if result is None:
-            logger.warning("[activity-check] Both LLMs failed — using local fallback")
-            w  = word.lower().strip()
-            c  = child_said.lower().strip().rstrip('.,!? ')
-            ok = (w in c) or (c in w)
-            result = {
-                "correct":  ok,
-                "feedback": f"Great job! {word} is correct! 🌟" if ok else f"Try again! The word is {word}",
-                "hint":     "" if ok else f"Say it slowly: {word}",
-            }
-
+        result = _evaluate_activity_answer(word, child_said, activity_name, student_name)
         return jsonify({"result": result})
+    except Exception as e:
+        logger.error("[activity-check] ERROR: %s", e, exc_info=True)
+        return jsonify({"error": "An error occurred"}), 500
+
+@app.route('/activity-check-audio', methods=['POST'])
+@require_auth_token
+def activity_check_audio():
+    """
+    Transcribe audio AND evaluate activity answer in one go.
+    Accepts: audio file, word, activity_name, student_name
+    Returns: { result: { correct, feedback, hint }, detected_text: "..." }
+    """
+    try:
+        if 'audio' not in request.files:
+            return jsonify({"status": "error", "message": "No audio file"}), 400
+
+        # 1. Extract metadata
+        word          = html.escape(request.form.get("word", ""))
+        activity_name = html.escape(request.form.get("activity_name", "Activity"))
+        student_name  = html.escape(request.form.get("student_name", "Student"))
+        
+        # 2. Transcribe
+        audio_file = request.files['audio']
+        with io.BytesIO(audio_file.read()) as raw_buf:
+            audio = AudioSegment.from_file(raw_buf)
+        with io.BytesIO() as wav_buffer:
+            audio.export(wav_buffer, format="wav")
+            wav_buffer.seek(0)
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_buffer) as source:
+                audio_data = recognizer.record(source)
+                try:
+                    text = recognizer.recognize_google(audio_data, language="en-IN")
+                except sr.UnknownValueError:
+                    logger.info("[activity-audio] Silence/No speech detected")
+                    return jsonify({"status": "nothing_heard", "message": "Silence detected"}), 200
+
+        logger.info("[activity-audio] Transcribed: '%s'", text)
+
+        # 3. Evaluate
+        result = _evaluate_activity_answer(word, text, activity_name, student_name)
+        return jsonify({
+            "status": "success",
+            "result": result,
+            "detected_text": text
+        })
 
     except Exception as e:
-        logger.error("[activity-check] FULL ERROR: %s", e, exc_info=True)
-        return jsonify({"error": "An error occurred"}), 500
+        logger.error("[activity-check-audio] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/generate-activity-questions', methods=['POST'])
 @require_auth_token
