@@ -109,7 +109,10 @@ def get_pending_users():
             "type": u.get("role"),
             "name": u.get("name"),
             "email": u.get("email"),
-            "date": u.get("created_at")
+            "date": u.get("created_at"),
+            "child_name": u.get("child_name"),
+            "roll_number": u.get("roll_number"),
+            "school": u.get("school")
         })
 
     return jsonify(formatted)
@@ -173,13 +176,13 @@ def all_users():
 @admin_required
 def add_teacher():
     data = request.json
-
-    if users.find_one({"email": data["email"]}):
+    email = data.get("email", "").lower()
+    if users.find_one({"email": email}):
         return jsonify({"msg": "Email exists"}), 400
 
     teacher = {
         "name": data["name"],
-        "email": data["email"],
+        "email": email,
         "phone": data["phone"],
         "school": data.get("school"),
         "class": data.get("class"),
@@ -203,7 +206,7 @@ def edit_teacher(id):
 
     update_data = {
         "name": data.get("name"),
-        "email": data.get("email"),
+        "email": data.get("email", "").lower() if data.get("email") else None,
         "phone": data.get("phone"),
         "school": data.get("school"),
         "class": data.get("class"),
@@ -237,7 +240,7 @@ def edit_parent(id):
 
     update_data = {
         "name": data.get("name"),
-        "email": data.get("email"),
+        "email": data.get("email", "").lower() if data.get("email") else None,
         "phone": data.get("phone"),
         "child_name": data.get("childName"),
         "child_class": data.get("childClass"),
@@ -277,7 +280,7 @@ def add_student():
         "class": data.get("class", ""),
         "parent_id": parent["_id"] if parent else None,
         "parent_name": data.get("parentName"),
-        "email": data.get("email"),
+        "email": data.get("email", "").lower() if data.get("email") else None,
         "phone": data.get("phone"),
         "roll_number": data.get("rollNumber"),
         "face_registered": False,
@@ -330,7 +333,7 @@ def edit_student(id):
         "name": data.get("name"),
         "class": data.get("class"),
         "parent_name": data.get("parentName"),
-        "email": data.get("email"),
+        "email": data.get("email", "").lower() if data.get("email") else None,
         "phone": data.get("phone"),
         "roll_number": data.get("rollNumber"),
     }

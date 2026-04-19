@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 from bson import ObjectId
 from datetime import datetime
 from extensions import students, users, db
@@ -13,6 +13,10 @@ parent_bp = Blueprint('parent_bp', __name__)
 @token_required
 def get_parent_children(parent_id):
     try:
+        # Security check: Match authenticated user or admin
+        if g.user['role'] != 'admin' and g.user['id'] != parent_id:
+            return jsonify({"status": "error", "message": "Unauthorized access"}), 403
+
         my_students = list(students.find({"parent_id": ObjectId(parent_id)}))
         formatted = []
         for s in my_students:
@@ -33,48 +37,40 @@ def get_parent_children(parent_id):
 @token_required
 def get_child_data():
     try:
-        parent_id = request.args.get('parent_id')
-        if not parent_id:
-            return jsonify({"status": "error", "message": "parent_id required"}), 400
+        # Use g.user['id'] if parent_id is missing or to enforce security
+        parent_id = request.args.get('parent_id') or g.user['id']
+        
+        # Security: ensure parent can only see their own data
+        if g.user['role'] != 'admin' and g.user['id'] != parent_id:
+            return jsonify({"status": "error", "message": "Unauthorized access"}), 403
 
-        # Parent dhundo
-        parent = db["users"].find_one({"_id": ObjectId(parent_id)})
-        if not parent:
-            return jsonify({"status": "error", "message": "Parent not found"}), 404
+        # Preferred lookup: Using parent_id link in students collection
+        student = db["students"].find_one({"parent_id": ObjectId(parent_id)})
+        
+        # Fallback to old name-based lookup if no link exists
+        if not student:
+            parent = db["users"].find_one({"_id": ObjectId(parent_id)})
+            if parent and parent.get("child_name"):
+                student = db["students"].find_one(
+                    {"name": {"$regex": f"^{parent.get('child_name')}$", "$options": "i"}}
+                )
 
-        child_name = parent.get("child_name", "")
-        if not child_name:
+        if not student:
             return jsonify({"status": "not_found", "message": "No child linked"})
 
-        # Student dhundo
-        student = db["students"].find_one(
-            {"name": {"$regex": f"^{child_name}$", "$options": "i"}}
-        )
-        if not student:
-            return jsonify({"status": "not_found", "message": "Child not found"})
-
+        child_name = student.get("name", "")
         today = datetime.now().strftime("%Y-%m-%d")
 
         logger.debug("[child-data] Student _id: %s | child_name: %s | today: %s", student['_id'], child_name, today)
 
-
-        # ✅ student_id SE check karo — naam case mismatch problem nahi aayegi
         attendance = db["attendance"].find_one({
             "$or": [
-                # 1. student_id ObjectId se match
                 {"student_id": student["_id"], "date": today},
-                # 2. student_id string se match (purani records)
                 {"student_id": str(student["_id"]), "date": today},
-                # 3. naam se match (case-insensitive)
                 {"name": {"$regex": f"^{child_name}$", "$options": "i"}, "date": today},
-                # 4. student_name field se match (kuch purani records mein)
-                {"student_name": {"$regex": f"^{child_name}$", "$options": "i"}, "date": today},
             ]
         })
 
-        logger.debug("[child-data] Attendance found: %s", attendance is not None)
-        if attendance:
-            logger.debug("[child-data] Attendance record: %s", attendance)
         return jsonify({
             "status": "success",
             "student": {
@@ -100,12 +96,21 @@ def get_child_stars():
         if not student_id:
             return jsonify({"status": "error", "message": "student_id required"}), 400
 
-        today = datetime.now().strftime("%Y-%m-%d")
-
         try:
             student_oid = ObjectId(student_id)
         except Exception:
             return jsonify({"status": "error", "message": "Invalid student_id"}), 400
+
+        # Security Check: Verify parent owns this student
+        if g.user['role'] != 'admin':
+            student_doc = db["students"].find_one({"_id": student_oid})
+            if not student_doc or str(student_doc.get("parent_id")) != g.user['id']:
+                # Second chance: check child_name if parent_id link is missing
+                parent_doc = db["users"].find_one({"_id": ObjectId(g.user['id'])})
+                if not parent_doc or parent_doc.get("child_name", "").lower() != student_doc.get("name", "").lower():
+                    return jsonify({"status": "error", "message": "Unauthorized access to this student"}), 403
+
+        today = datetime.now().strftime("%Y-%m-%d")
 
         results = list(db["activity_results"].find(
             {"student_id": student_oid}
@@ -146,15 +151,28 @@ def check_child_attendance():
     try:
         student_id = request.args.get('student_id')
         name       = request.args.get('name', '')
-        today      = datetime.now().strftime("%Y-%m-%d")
-
-        # ObjectId banana try karo
+        
         try:
             oid = ObjectId(student_id)
         except Exception:
             oid = None
 
-        # Har possible field se check karo
+        # Security Check
+        if g.user['role'] != 'admin':
+             student_doc = db["students"].find_one({"_id": oid}) if oid else None
+             if not student_doc:
+                 # Try finding by name if no ID
+                 student_doc = db["students"].find_one({"name": {"$regex": f"^{name}$", "$options": "i"}})
+             
+             if not student_doc:
+                 return jsonify({"status": "error", "message": "Student not found"}), 404
+                 
+             if str(student_doc.get("parent_id")) != g.user['id']:
+                 parent_doc = db["users"].find_one({"_id": ObjectId(g.user['id'])})
+                 if not parent_doc or parent_doc.get("child_name", "").lower() != student_doc.get("name", "").lower():
+                     return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+        today      = datetime.now().strftime("%Y-%m-%d")
         query = {"date": today, "$or": [
             {"name":         {"$regex": f"^{name}$", "$options": "i"}},
             {"student_name": {"$regex": f"^{name}$", "$options": "i"}},
@@ -164,8 +182,6 @@ def check_child_attendance():
             query["$or"].append({"student_id": str(oid)})
 
         attendance = db["attendance"].find_one(query)
-
-        logger.debug("[check-attendance] name=%s | present=%s", name, attendance is not None)
 
         return jsonify({
             "status":  "success",
@@ -181,9 +197,12 @@ def check_child_attendance():
 @token_required
 def get_parent_profile():
     try:
-        parent_id = request.args.get('parent_id')
-        if not parent_id:
-            return jsonify({"status": "error", "message": "parent_id required"}), 400
+        parent_id = request.args.get('parent_id') or g.user['id']
+        
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != parent_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
         parent = db["users"].find_one({"_id": ObjectId(parent_id)})
         if not parent:
             return jsonify({"status": "error", "message": "Parent not found"}), 404
@@ -206,15 +225,17 @@ def get_parent_profile():
 @token_required
 def update_parent_profile():
     try:
-        parent_id = request.args.get('parent_id')
-        if not parent_id:
-            return jsonify({"status": "error", "message": "parent_id required"}), 400
+        parent_id = request.args.get('parent_id') or g.user['id']
+
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != parent_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
         data = request.get_json() or {}
 
         update_fields = {}
         if data.get("name"):       update_fields["name"]       = data["name"]
-        if data.get("email"):      update_fields["email"]      = data["email"]
+        if data.get("email"):      update_fields["email"]      = data["email"].lower()
         if data.get("phone"):      update_fields["phone"]      = data["phone"]
         if data.get("occupation"): update_fields["occupation"] = data["occupation"]
 
@@ -233,9 +254,11 @@ def update_parent_profile():
 @token_required
 def change_parent_password():
     try:
-        parent_id = request.args.get('parent_id')
-        if not parent_id:
-            return jsonify({"status": "error", "message": "parent_id required"}), 400
+        parent_id = request.args.get('parent_id') or g.user['id']
+        
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != parent_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
         data = request.get_json() or {}
         current_password = data.get("currentPassword", "")
@@ -264,3 +287,4 @@ def change_parent_password():
     except Exception as e:
         logger.error("[change-password] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+

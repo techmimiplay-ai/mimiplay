@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from datetime import datetime, timezone, timedelta
 import jwt
 from config import SECRET
@@ -23,12 +23,13 @@ def register():
     if missing:
         return jsonify({"msg": f"Missing fields: {', '.join(missing)}"}), 400
 
-    if users.find_one({"email": data["email"]}):
+    email = data.get("email", "").lower()
+    if users.find_one({"email": email}):
         return jsonify({"msg": "Email already exists"}), 400
 
     user = {
         "name":       data["fullName"],
-        "email":      data["email"],
+        "email":      email,
         "phone":      data["phone"],
         "school":     data.get("school"),
         "role":       data["role"],
@@ -37,6 +38,11 @@ def register():
         "created_at": datetime.now(timezone.utc)
     }
 
+    # Add optional child info for parents
+    if data["role"] == "parent":
+        user["child_name"] = data.get("childName")
+        user["roll_number"] = data.get("rollNumber")
+
     users.insert_one(user)
     return jsonify({"msg": "Registered successfully"})
 
@@ -44,8 +50,8 @@ def register():
 @auth_bp.route('/api/login', methods=['POST'])
 def login():
     data = request.json or {}
-
-    user = users.find_one({"email": data.get("email")})
+    email = data.get("email", "").lower()
+    user = users.find_one({"email": email})
 
     if not user or not bcrypt.check_password_hash(user["password"], data.get("password", "")):
         return jsonify({"msg": "Invalid credentials"}), 401
@@ -76,7 +82,8 @@ def token_required(f):
             return jsonify({'status': 'error', 'message': 'Token is missing!'}), 401
 
         try:
-            jwt.decode(token, SECRET, algorithms=['HS256'])
+            data = jwt.decode(token, SECRET, algorithms=['HS256'])
+            g.user = data  # Store user info in flask.g
         except jwt.ExpiredSignatureError:
             return jsonify({'status': 'error', 'message': 'Token has expired!'}), 401
         except jwt.InvalidTokenError:
@@ -100,6 +107,7 @@ def admin_required(f):
 
         try:
             data = jwt.decode(token, SECRET, algorithms=['HS256'])
+            g.user = data
             if data.get('role') != 'admin':        # ← Role check
                 return jsonify({'status': 'error', 'message': 'Admin access only!'}), 403
         except jwt.ExpiredSignatureError:
@@ -126,6 +134,7 @@ def teacher_required(f):
 
         try:
             data = jwt.decode(token, SECRET, algorithms=['HS256'])
+            g.user = data
             if data.get('role') not in ['admin', 'teacher']:   # ← admin bhi teacher pages dekh sake
                 return jsonify({'status': 'error', 'message': 'Teacher access only!'}), 403
         except jwt.ExpiredSignatureError:
@@ -134,4 +143,4 @@ def teacher_required(f):
             return jsonify({'status': 'error', 'message': 'Token is invalid!'}), 401
 
         return f(*args, **kwargs)
-    return decorated
+    return decorated

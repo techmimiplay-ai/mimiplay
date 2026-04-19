@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from bson import ObjectId
 from datetime import datetime, timedelta
 from extensions import db, bcrypt
@@ -16,7 +16,12 @@ teacher_bp = Blueprint('teacher_bp', __name__)
 @teacher_required
 def get_teacher_dashboard_stats():
     try:
-        teacher_id = request.args.get('teacher_id')
+        teacher_id = request.args.get('teacher_id') or g.user['id']
+        
+        # Security check: Teacher can only see their own dashboard or admin
+        if g.user['role'] != 'admin' and g.user['id'] != teacher_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
         today      = datetime.now().strftime("%Y-%m-%d")
 
         # Teacher naam
@@ -28,6 +33,7 @@ def get_teacher_dashboard_stats():
                     teacher_name = teacher.get("name", "Teacher")
             except Exception:
                 pass
+
 
         total_students  = db["students"].count_documents({})
         present_today   = db["attendance"].count_documents({"date": today})
@@ -230,9 +236,12 @@ def get_all_students_with_stats():
 @teacher_required
 def get_teacher_profile():
     try:
-        teacher_id = request.args.get('teacher_id')
-        if not teacher_id:
-            return jsonify({"status": "error", "message": "teacher_id required"}), 400
+        teacher_id = request.args.get('teacher_id') or g.user['id']
+        
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != teacher_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
         teacher = db["users"].find_one({"_id": ObjectId(teacher_id)})
         if not teacher:
             return jsonify({"status": "error", "message": "Teacher not found"}), 404
@@ -254,6 +263,7 @@ def get_teacher_profile():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+
 # ─────────────────────────────────────────────────────────────
 # PUT /api/teacher/profile
 # ─────────────────────────────────────────────────────────────
@@ -262,9 +272,11 @@ def get_teacher_profile():
 @teacher_required
 def update_teacher_profile():
     try:
-        teacher_id = request.args.get('teacher_id')
-        if not teacher_id:
-            return jsonify({"status": "error", "message": "teacher_id required"}), 400
+        teacher_id = request.args.get('teacher_id') or g.user['id']
+
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != teacher_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
         data = request.get_json() or {}
 
@@ -278,7 +290,10 @@ def update_teacher_profile():
             ("subject",  "subject"),
         ]:
             if data.get(field) is not None:
-                update_fields[db_key] = data[field]
+                val = data[field]
+                if field == "email":
+                    val = val.lower()
+                update_fields[db_key] = val
 
         db["users"].update_one(
             {"_id": ObjectId(teacher_id)},
@@ -292,6 +307,7 @@ def update_teacher_profile():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+
 # ─────────────────────────────────────────────────────────────
 # PUT /api/teacher/change-password
 # ─────────────────────────────────────────────────────────────
@@ -300,9 +316,11 @@ def update_teacher_profile():
 @teacher_required
 def change_teacher_password():
     try:
-        teacher_id = request.args.get('teacher_id')
-        if not teacher_id:
-            return jsonify({"status": "error", "message": "teacher_id required"}), 400
+        teacher_id = request.args.get('teacher_id') or g.user['id']
+
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != teacher_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
         data = request.get_json() or {}
         current_password = data.get("currentPassword", "")
@@ -333,6 +351,7 @@ def change_teacher_password():
     except Exception as e:
         logger.error("[change-password] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 # ─────────────────────────────────────────────────────────────

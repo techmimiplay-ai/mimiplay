@@ -749,10 +749,10 @@ def activity_check():
     """Check if child said a word correctly using LLM (Text-only version)."""
     try:
         data          = request.get_json() or {}
-        word          = html.escape(data.get("word", ""))
-        child_said    = html.escape(data.get("child_said", ""))
-        activity_name = html.escape(data.get("activity_name", "Word Practice"))
-        student_name  = html.escape(data.get("student_name", "Student"))
+        word          = data.get("word", "")
+        child_said    = data.get("child_said", "")
+        activity_name = data.get("activity_name", "Word Practice")
+        student_name  = data.get("student_name", "Student")
 
         result = _evaluate_activity_answer(word, child_said, activity_name, student_name)
         return jsonify({"result": result})
@@ -773,9 +773,9 @@ def activity_check_audio():
             return jsonify({"status": "error", "message": "No audio file"}), 400
 
         # 1. Extract metadata
-        word          = html.escape(request.form.get("word", ""))
-        activity_name = html.escape(request.form.get("activity_name", "Activity"))
-        student_name  = html.escape(request.form.get("student_name", "Student"))
+        word          = request.form.get("word", "")
+        activity_name = request.form.get("activity_name", "Activity")
+        student_name  = request.form.get("student_name", "Student")
         
         # 2. Transcribe
         audio_file = request.files['audio']

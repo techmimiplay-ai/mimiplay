@@ -317,7 +317,7 @@ class MimiLLMSession:
         yt_video = self._fetch_youtube_video_url(yt_search) if yt_search else None
         logger.info("YOUTUBE URL: %s", yt_video)
         return {
-            "text": html.escape(data.get("text") or ""),
+            "text": data.get("text") or "",
             "image_url": image_url,
             "yt_video": yt_video,
             "provider": "openai" if self.openai_key else "anthropic",
