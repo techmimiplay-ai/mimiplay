@@ -4,7 +4,10 @@ import jwt
 from config import SECRET
 from extensions import users, bcrypt
 from functools import wraps
+import secrets
+import logging
 
+logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
 
 JWT_EXPIRY_HOURS = 24
@@ -62,10 +65,91 @@ def login():
     token = _make_token({"id": str(user["_id"]), "role": user["role"]})
 
     return jsonify({
-        "token": token,
-        "role": user["role"],
-        "user_id": str(user["_id"])
+        "token":   token,
+        "role":    user["role"],
+        "user_id": str(user["_id"]),
+        "name":    user.get("name", "")
     })
+
+
+@auth_bp.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    """Handle password reset requests"""
+    try:
+        data = request.get_json() or {}
+        email = data.get("email", "").lower().strip()
+        
+        if not email:
+            return jsonify({"msg": "Email is required"}), 400
+            
+        user = users.find_one({"email": email})
+        if not user:
+            # Don't reveal if email exists or not for security
+            return jsonify({"msg": "If the email exists, a reset link has been sent"}), 200
+            
+        # Generate reset token (valid for 1 hour)
+        reset_token = secrets.token_urlsafe(32)
+        reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        
+        # Store reset token in user document
+        users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {
+                "reset_token": reset_token,
+                "reset_expires": reset_expires
+            }}
+        )
+        
+        # TODO: Send email with reset link
+        # For now, return the reset link in the response for dev/testing.
+        # In production, replace this with an email service (e.g. SendGrid, SES).
+        frontend_url = request.headers.get('Origin', 'http://localhost:5173')
+        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+        logger.info(f"Password reset link for {email}: {reset_link}")
+        
+        return jsonify({
+            "msg": "If the email exists, a reset link has been sent",
+            "reset_link": reset_link   # Remove this line once email service is integrated
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Forgot password error: {e}")
+        return jsonify({"msg": "An error occurred"}), 500
+
+
+@auth_bp.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    """Handle password reset with token"""
+    try:
+        data = request.get_json() or {}
+        token = data.get("token", "").strip()
+        new_password = data.get("password", "")
+        
+        if not token or not new_password:
+            return jsonify({"msg": "Token and new password are required"}), 400
+            
+        # Find user with valid reset token
+        user = users.find_one({
+            "reset_token": token,
+            "reset_expires": {"$gt": datetime.now(timezone.utc)}
+        })
+        
+        if not user:
+            return jsonify({"msg": "Invalid or expired reset token"}), 400
+            
+        # Update password and clear reset token
+        hashed_password = bcrypt.generate_password_hash(new_password).decode()
+        users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"password": hashed_password},
+             "$unset": {"reset_token": "", "reset_expires": ""}}
+        )
+        
+        return jsonify({"msg": "Password reset successfully"}), 200
+        
+    except Exception as e:
+        logger.error(f"Reset password error: {e}")
+        return jsonify({"msg": "An error occurred"}), 500
 
 
 def token_required(f):

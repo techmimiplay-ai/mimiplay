@@ -146,6 +146,23 @@ def reject_user(id):
         return jsonify({"msg": "Error rejecting user", "error": str(e)}), 500
 
 
+@admin_bp.route('/api/admin/deactivate/<id>', methods=['PUT'])
+@admin_required
+def deactivate_user(id):
+    """Deactivate a user (set status to inactive instead of deleting)"""
+    try:
+        result = users.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {"status": "inactive", "deactivated_at": datetime.utcnow()}}
+        )
+        if result.matched_count == 0:
+            return jsonify({"msg": "User not found"}), 404
+        return jsonify({"msg": "User deactivated successfully"})
+    except Exception as e:
+        logger.error("[DeactivateUser] Error: %s", e, exc_info=True)
+        return jsonify({"msg": "Error deactivating user", "error": str(e)}), 500
+
+
 @admin_bp.route('/api/admin/all-users')
 # @token_required
 @admin_required
@@ -245,6 +262,10 @@ def edit_parent(id):
         "child_name": data.get("childName"),
         "child_class": data.get("childClass"),
         "status": data.get("status"),
+        # WhatsApp settings
+        "whatsapp_enabled": data.get("whatsapp_enabled"),
+        "activity_notifications": data.get("activity_notifications"),
+        "chat_history_notifications": data.get("chat_history_notifications"),
     }
 
     # Remove None values
@@ -266,7 +287,6 @@ def edit_parent(id):
 
 @admin_bp.route('/api/admin/add-student', methods=['POST'])
 @token_required
-# @admin_required
 def add_student():
     data = request.json
 
@@ -324,8 +344,7 @@ def get_all_students():
     return jsonify(formatted)
 
 @admin_bp.route('/api/admin/edit-student/<id>', methods=['PUT'])
-# @token_required
-@admin_required
+@token_required
 def edit_student(id):
     data = request.json
 
@@ -351,7 +370,7 @@ def edit_student(id):
     return jsonify({"msg": "Student updated successfully"})
 
 @admin_bp.route('/api/admin/delete-student/<id>', methods=['DELETE'])
-@admin_required
+@token_required
 def delete_student(id):
     try:
         import gridfs
@@ -372,9 +391,108 @@ def delete_student(id):
         return jsonify({"msg": "Delete failed", "error": str(e)}), 500
 
 # ============================
+# ADMIN SETTINGS
+# ============================
+@admin_bp.route('/api/admin/settings', methods=['GET'])
+@admin_required
+def get_settings():
+    try:
+        doc = db["settings"].find_one({"_id": "admin_settings"})
+        if not doc:
+            return jsonify({
+                "status": "success",
+                "settings": {
+                    "autoApproval": False,
+                    "emailNotifications": True,
+                    "backupFrequency": "daily",
+                    "maxStudentsPerClass": 20,
+                    "sessionTimeout": 30,
+                    "debugMode": False
+                },
+                "feature_flags": {
+                    "chatEnabled": True,
+                    "activitiesEnabled": True,
+                    "whatsappEnabled": True
+                },
+                "whatsapp_settings": {
+                    "whatsappEnabled": True,
+                    "activityNotifications": True,
+                    "chatHistoryNotifications": True,
+                    "dailyReports": False
+                }
+            })
+        doc.pop("_id", None)
+        # Ensure feature_flags always present with defaults
+        if "feature_flags" not in doc:
+            doc["feature_flags"] = {
+                "chatEnabled": True,
+                "activitiesEnabled": True,
+                "whatsappEnabled": True
+            }
+        return jsonify({"status": "success", **doc})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@admin_bp.route('/api/admin/settings', methods=['POST', 'PUT'])
+@admin_required
+def save_settings():
+    try:
+        data = request.get_json() or {}
+
+        allowed_settings = {"autoApproval", "emailNotifications", "backupFrequency",
+                           "maxStudentsPerClass", "sessionTimeout", "debugMode"}
+        settings = {k: v for k, v in data.items() if k in allowed_settings}
+
+        whatsapp_settings = data.get("whatsapp_settings", {})
+        allowed_whatsapp = {"whatsappEnabled", "activityNotifications",
+                           "chatHistoryNotifications", "dailyReports"}
+        whatsapp_settings = {k: v for k, v in whatsapp_settings.items() if k in allowed_whatsapp}
+
+        feature_flags = data.get("feature_flags", {})
+        allowed_flags = {"chatEnabled", "activitiesEnabled", "whatsappEnabled"}
+        feature_flags = {k: bool(v) for k, v in feature_flags.items() if k in allowed_flags}
+
+        update_doc = {}
+        if settings:       update_doc.update(settings)
+        if whatsapp_settings: update_doc["whatsapp_settings"] = whatsapp_settings
+        if feature_flags:  update_doc["feature_flags"] = feature_flags
+
+        db["settings"].update_one(
+            {"_id": "admin_settings"},
+            {"$set": update_doc},
+            upsert=True
+        )
+        return jsonify({"status": "success", "message": "Settings saved"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+# ============================
+# PUBLIC APP SETTINGS
+# No auth required — called on app load by all roles
+# Returns only feature flags safe to expose
+# ============================
+@admin_bp.route('/api/app-settings', methods=['GET'])
+def get_app_settings():
+    try:
+        doc = db["settings"].find_one({"_id": "admin_settings"})
+        flags = (doc or {}).get("feature_flags", {})
+        return jsonify({
+            "chatEnabled":       flags.get("chatEnabled",       True),
+            "activitiesEnabled": flags.get("activitiesEnabled", True),
+            "whatsappEnabled":   flags.get("whatsappEnabled",   True),
+        })
+    except Exception as e:
+        # Fail open — never block the app due to a settings fetch error
+        return jsonify({"chatEnabled": True, "activitiesEnabled": True, "whatsappEnabled": True})
+
+
+# ============================
 # CONFIG: BADGES
 # ============================
 @admin_bp.route('/api/config/badges', methods=['GET'])
+@token_required
 def get_badges_config():
     badges = [
         {"id": 1, "icon": "🌟", "name": "First Star",    "description": "Earn your first star",   "unlockAt": 1,   "rarity": "common"},
@@ -393,6 +511,7 @@ def get_badges_config():
 # CONFIG: LEVELS
 # ============================
 @admin_bp.route('/api/config/levels', methods=['GET'])
+@token_required
 def get_levels_config():
     levels = [
         {"name": "Little Star",  "min": 0,   "max": 49,         "emoji": "⭐"},
@@ -409,6 +528,7 @@ def get_levels_config():
 # CONFIG: SKILLS
 # ============================
 @admin_bp.route('/api/config/skills', methods=['GET'])
+@token_required
 def get_skills_config():
     skills = [
         {"name": "Alphabets",     "unlocksAt": 0,   "color": "green"},
@@ -419,37 +539,3 @@ def get_skills_config():
         {"name": "Phonics",       "unlocksAt": 100, "color": "pink"},
     ]
     return jsonify({"status": "success", "skills": skills})
-
-
-# ============================
-# PARENT: CLASS LEADERBOARD
-# ============================
-@admin_bp.route('/api/parent/class-leaderboard', methods=['GET'])
-@token_required
-def get_class_leaderboard():
-    try:
-
-        # Aggregate total stars per student from activity_results
-        pipeline = [
-            {"$group": {
-                "_id":        "$student_id",
-                "name":       {"$first": "$student_name"},
-                "total_stars": {"$sum": "$stars"}
-            }},
-            {"$sort": {"total_stars": -1}},
-            {"$limit": 10}
-        ]
-        results = list(db["activity_results"].aggregate(pipeline))
-
-        leaderboard = []
-        for r in results:
-            leaderboard.append({
-                "student_id": str(r["_id"]),
-                "name":       r.get("name", "Student"),
-                "stars":      r.get("total_stars", 0)
-            })
-
-        return jsonify({"status": "success", "leaderboard": leaderboard})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500

@@ -288,3 +288,117 @@ def change_parent_password():
         logger.error("[change-password] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/parent/child-chat-history
+# ─────────────────────────────────────────────────────────────
+@parent_bp.route('/api/parent/child-chat-history', methods=['GET'])
+@token_required
+def get_child_chat_history():
+    """Get chat history for parent's child"""
+    try:
+        parent_id = request.args.get('parent_id') or g.user['id']
+        student_id = request.args.get('student_id', '')
+        date_filter = request.args.get('date', '')
+        limit = int(request.args.get('limit', 20))
+        
+        # Security check
+        if g.user['role'] != 'admin' and g.user['id'] != parent_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+        
+        # Get parent's child info
+        parent = db["users"].find_one({"_id": ObjectId(parent_id)})
+        if not parent:
+            return jsonify({"status": "error", "message": "Parent not found"}), 404
+            
+        child_name = parent.get('child_name', '')
+        
+        # If student_id provided, verify it belongs to this parent
+        if student_id:
+            try:
+                student_oid = ObjectId(student_id)
+                student = db["students"].find_one({"_id": student_oid})
+                if student:
+                    # Check if parent owns this student
+                    if str(student.get('parent_id')) != parent_id and student.get('name', '').lower() != child_name.lower():
+                        return jsonify({"status": "error", "message": "Unauthorized access to this student"}), 403
+                    child_name = student.get('name', child_name)
+            except Exception:
+                pass
+        
+        if not child_name:
+            return jsonify({"status": "error", "message": "No child linked to this parent"}), 404
+            
+        # Build query for chat history
+        query = {'student_name': {'$regex': f'^{child_name}$', '$options': 'i'}}
+        if date_filter:
+            query['date'] = date_filter
+            
+        # Get chat sessions
+        chat_sessions = list(db["mimi_chats"].find(query)
+                           .sort("updated_at", -1)
+                           .limit(limit))
+        
+        formatted_sessions = []
+        for session in chat_sessions:
+            messages = session.get('messages', [])
+            total_messages = len(messages)
+            
+            formatted_sessions.append({
+                'session_id': session.get('session_id', ''),
+                'student_name': session.get('student_name', ''),
+                'date': session.get('date', ''),
+                'started_at': session.get('started_at', ''),
+                'updated_at': session.get('updated_at', ''),
+                'total_messages': total_messages,
+                'messages': messages,  # Parents can see all messages
+                'summary': {
+                    'questions_asked': total_messages,
+                    'session_duration': session.get('session_duration', 'N/A'),
+                    'topics_discussed': list(set([msg.get('question', '')[:30] + '...' for msg in messages[:5] if msg.get('question')]))
+                }
+            })
+            
+        return jsonify({
+            'status': 'success',
+            'child_name': child_name,
+            'sessions': formatted_sessions,
+            'total_sessions': len(formatted_sessions)
+        })
+        
+    except Exception as e:
+        logger.error("[parent-chat-history] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/parent/class-leaderboard
+# ─────────────────────────────────────────────────────────────
+@parent_bp.route('/api/parent/class-leaderboard', methods=['GET'])
+@token_required
+def get_class_leaderboard():
+    try:
+        # Aggregate total stars per student from activity_results
+        pipeline = [
+            {"$group": {
+                "_id":        "$student_id",
+                "name":       {"$first": "$student_name"},
+                "total_stars": {"$sum": "$stars"}
+            }},
+            {"$sort": {"total_stars": -1}},
+            {"$limit": 10}
+        ]
+        results = list(db["activity_results"].aggregate(pipeline))
+
+        leaderboard = []
+        for r in results:
+            leaderboard.append({
+                "student_id": str(r["_id"]),
+                "name":       r.get("name", "Student"),
+                "stars":      r.get("total_stars", 0)
+            })
+
+        return jsonify({"status": "success", "leaderboard": leaderboard})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500

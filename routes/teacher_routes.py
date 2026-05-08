@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, g
 from bson import ObjectId
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from extensions import db, bcrypt
 from routes.auth_routes import token_required, teacher_required
 import logging
@@ -165,67 +165,7 @@ def update_attendance_manual():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# ─────────────────────────────────────────────────────────────
-# GET /api/admin/all-students-with-stats
-# ─────────────────────────────────────────────────────────────
-@teacher_bp.route('/api/admin/all-students-with-stats', methods=['GET'])
-# @token_required
-@teacher_required
-def get_all_students_with_stats():
-    try:
-        all_students = list(db["students"].find())
-        result = []
 
-        working_days = sum(
-            1 for i in range(30)
-            if (datetime.now() - timedelta(days=i)).weekday() < 5
-        )
-
-        for s in all_students:
-            sid      = str(s["_id"])
-            sid_name = s.get("name", "")
-
-            total_att = db["attendance"].count_documents({
-                "$or": [
-                    {"student_id": s["_id"]},
-                    {"name": {"$regex": f"^{sid_name}$", "$options": "i"}},
-                ]
-            })
-            att_pct = min(round((total_att / working_days) * 100) if working_days > 0 else 0, 100)
-
-            activity_results = list(db["activity_results"].find({
-                "$or": [
-                    {"student_id": s["_id"]},
-                    {"student_name": {"$regex": f"^{sid_name}$", "$options": "i"}},
-                ]
-            }))
-
-            avg_score = 0
-            if activity_results:
-                avg_score = round(
-                    sum(r.get("stars", 0) for r in activity_results) / len(activity_results), 1
-                )
-
-            result.append({
-                "_id":         sid,
-                "name":        sid_name,
-                "class":       s.get("class",        ""),
-                "roll_number": s.get("roll_number",  ""),
-                "parent_name": s.get("parent_name",  ""),
-                "email":       s.get("email",        ""),
-                "phone":       s.get("phone",        ""),
-                "age":         s.get("age",          4),
-                "avg_score":   avg_score,
-                "attendance":  att_pct,
-                "face_registered": s.get("face_registered", False),
-                "created_at":  str(s.get("created_at", "")),
-            })
-
-        return jsonify(result)
-
-    except Exception as e:
-        logger.error("[all-students-with-stats] ERROR: %s", e, exc_info=True)
-        return jsonify({"error": str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────
@@ -355,6 +295,45 @@ def change_teacher_password():
 
 
 # ─────────────────────────────────────────────────────────────
+# GET /api/teacher/activity-stats
+# Returns per-activity completion count and avg star score
+# Used by ActivitiesTab.jsx to populate the stats cards
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/activity-stats', methods=['GET'])
+@teacher_required
+def get_activity_stats():
+    try:
+        pipeline = [
+            {
+                "$group": {
+                    "_id":               "$activity_id",
+                    "studentsCompleted": {"$sum": 1},
+                    "totalStars":        {"$sum": "$stars"},
+                }
+            }
+        ]
+        results = list(db["activity_results"].aggregate(pipeline))
+
+        stats = {}
+        for r in results:
+            activity_id = r["_id"]
+            if activity_id is None:
+                continue
+            completed = r["studentsCompleted"]
+            avg_score = round(r["totalStars"] / completed, 1) if completed > 0 else 0
+            stats[str(activity_id)] = {
+                "studentsCompleted": completed,
+                "avgScore":          avg_score,
+            }
+
+        return jsonify({"status": "success", "stats": stats})
+
+    except Exception as e:
+        logger.error("[activity-stats] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
 # GET /api/teacher/reports
 # ─────────────────────────────────────────────────────────────
 @teacher_bp.route('/api/teacher/reports', methods=['GET'])
@@ -471,35 +450,109 @@ def get_teacher_reports():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # ─────────────────────────────────────────────────────────────
-# GET /api/teacher/activity-stats
-# Per-activity completions aur avg score real DB se
+# GET /api/admin/all-students-with-stats
 # ─────────────────────────────────────────────────────────────
-@teacher_bp.route('/api/teacher/activity-stats', methods=['GET'])
+@teacher_bp.route('/api/admin/all-students-with-stats', methods=['GET'])
+# @token_required
 @teacher_required
-def get_activity_stats():
+def get_all_students_with_stats():
     try:
+        all_students = list(db["students"].find())
+        result = []
 
-        pipeline = [
-            {"$group": {
-                "_id":               "$activity_id",
-                "activity_name":     {"$first": "$activity_name"},
-                "total_completions": {"$sum": 1},
-                "avg_stars":         {"$avg": "$stars"}
-            }}
-        ]
-        results = list(db["activity_results"].aggregate(pipeline))
+        working_days = sum(
+            1 for i in range(30)
+            if (datetime.now() - timedelta(days=i)).weekday() < 5
+        )
 
-        stats_map = {}
-        for r in results:
-            stats_map[r["_id"]] = {
-                "studentsCompleted": r["total_completions"],
-                "avgScore":          round(r["avg_stars"], 1) if r["avg_stars"] else 0
-            }
+        for s in all_students:
+            sid      = str(s["_id"])
+            sid_name = s.get("name", "")
 
-        return jsonify({"status": "success", "stats": stats_map})
+            total_att = db["attendance"].count_documents({
+                "$or": [
+                    {"student_id": s["_id"]},
+                    {"name": {"$regex": f"^{sid_name}$", "$options": "i"}},
+                ]
+            })
+            att_pct = min(round((total_att / working_days) * 100) if working_days > 0 else 0, 100)
+
+            activity_results = list(db["activity_results"].find({
+                "$or": [
+                    {"student_id": s["_id"]},
+                    {"student_name": {"$regex": f"^{sid_name}$", "$options": "i"}},
+                ]
+            }))
+
+            avg_score = 0
+            if activity_results:
+                avg_score = round(
+                    sum(r.get("stars", 0) for r in activity_results) / len(activity_results), 1
+                )
+
+            result.append({
+                "_id":         sid,
+                "name":        sid_name,
+                "class":       s.get("class",        ""),
+                "roll_number": s.get("roll_number",  ""),
+                "parent_name": s.get("parent_name",  ""),
+                "email":       s.get("email",        ""),
+                "phone":       s.get("phone",        ""),
+                "age":         s.get("age",          4),
+                "avg_score":   avg_score,
+                "attendance":  att_pct,
+                "face_registered": s.get("face_registered", False),
+                "created_at":  str(s.get("created_at", "")),
+            })
+
+        return jsonify(result)
 
     except Exception as e:
+        logger.error("[all-students-with-stats] ERROR: %s", e, exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# POST /api/teacher/add-parent
+# Teacher adds a parent — auto-approved, no admin needed
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/add-parent', methods=['POST'])
+@teacher_required
+def teacher_add_parent():
+    try:
+        data  = request.get_json() or {}
+        email = data.get("email", "").lower().strip()
+
+        if not email:
+            return jsonify({"status": "error", "message": "Email is required"}), 400
+        if db["users"].find_one({"email": email}):
+            return jsonify({"status": "error", "message": "Email already exists"}), 400
+
+        password = data.get("password", "").strip()
+        if not password:
+            return jsonify({"status": "error", "message": "Password is required"}), 400
+
+        from extensions import bcrypt as _bcrypt
+        parent = {
+            "name":        data.get("name", "").strip(),
+            "email":       email,
+            "phone":       data.get("phone", "").strip(),
+            "role":        "parent",
+            "password":    _bcrypt.generate_password_hash(password).decode(),
+            "status":      "approved",   # auto-approved when added by teacher
+            "child_name":  data.get("childName", "").strip(),
+            "roll_number": data.get("rollNumber", "").strip(),
+            "added_by":    "teacher",
+            "created_at":  datetime.now(timezone.utc),
+        }
+        result = db["users"].insert_one(parent)
+        logger.info("[teacher-add-parent] Parent %s added by teacher %s", email, g.user.get('id'))
+        return jsonify({"status": "success", "message": "Parent added successfully", "parent_id": str(result.inserted_id)})
+
+    except Exception as e:
+        logger.error("[teacher-add-parent] ERROR: %s", e, exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # ─────────────────────────────────────────────────────────────
 # GET /api/teacher/all-parents
@@ -522,4 +575,226 @@ def get_all_parents():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+@teacher_bp.route('/api/teacher/add-review', methods=['POST'])
+@teacher_required
+def add_teacher_review():
+    """Add a teacher review/note for a student"""
+    try:
+        data         = request.get_json() or {}
+        student_id   = data.get("student_id", "")
+        student_name = data.get("student_name", "")
+        review_text  = data.get("review", "").strip()
+        rating       = data.get("rating", 0)
+        teacher_id   = g.user.get('id')
+
+        if not student_name or not review_text:
+            return jsonify({"status": "error", "message": "Student name and review text are required"}), 400
+
+        teacher      = db["users"].find_one({"_id": ObjectId(teacher_id)})
+        teacher_name = teacher.get("name", "Teacher") if teacher else "Teacher"
+
+        review_doc = {
+            "student_id":   ObjectId(student_id) if student_id else None,
+            "student_name": student_name,
+            "teacher_id":   ObjectId(teacher_id),
+            "teacher_name": teacher_name,
+            "review":       review_text,
+            "rating":       min(5, max(1, int(rating))) if rating else None,
+            "date":         datetime.now().strftime("%Y-%m-%d"),
+            "timestamp":    datetime.now(timezone.utc).isoformat(),
+            "created_at":   datetime.now(timezone.utc)
+        }
+
+        result = db["teacher_reviews"].insert_one(review_doc)
+        logger.info("[add-review] Teacher %s added review for %s", teacher_name, student_name)
+        return jsonify({"status": "success", "message": "Review added successfully", "review_id": str(result.inserted_id)})
+
+    except Exception as e:
+        logger.error("[add-review] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/teacher/reviews?student_id=<id>
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/reviews', methods=['GET'])
+@teacher_required
+def get_student_reviews():
+    """Fetch all reviews for a student"""
+    try:
+        student_id   = request.args.get('student_id', '')
+        student_name = request.args.get('student_name', '')
+
+        query = {}
+        if student_id:
+            try:
+                query['student_id'] = ObjectId(student_id)
+            except Exception:
+                pass
+        elif student_name:
+            query['student_name'] = {'$regex': f'^{student_name}$', '$options': 'i'}
+        else:
+            return jsonify({"status": "error", "message": "student_id or student_name required"}), 400
+
+        reviews = list(db["teacher_reviews"].find(query).sort("created_at", -1))
+        formatted = []
+        for r in reviews:
+            formatted.append({
+                "id":           str(r["_id"]),
+                "review":       r.get("review", ""),
+                "rating":       r.get("rating"),
+                "teacher_name": r.get("teacher_name", ""),
+                "date":         r.get("date", ""),
+                "timestamp":    r.get("timestamp", ""),
+            })
+
+        return jsonify({"status": "success", "reviews": formatted})
+
+    except Exception as e:
+        logger.error("[get-reviews] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# PUT /api/teacher/update-review/<review_id>
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/update-review/<review_id>', methods=['PUT'])
+@teacher_required
+def update_teacher_review(review_id):
+    """Edit an existing review — only the teacher who wrote it can edit"""
+    try:
+        data        = request.get_json() or {}
+        review_text = data.get("review", "").strip()
+        rating      = data.get("rating", None)
+        teacher_id  = g.user.get('id')
+
+        if not review_text:
+            return jsonify({"status": "error", "message": "Review text is required"}), 400
+
+        review = db["teacher_reviews"].find_one({"_id": ObjectId(review_id)})
+        if not review:
+            return jsonify({"status": "error", "message": "Review not found"}), 404
+
+        # Only the author or admin can edit
+        if g.user['role'] != 'admin' and str(review.get('teacher_id')) != teacher_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+        update_fields = {
+            "review":     review_text,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if rating is not None:
+            update_fields["rating"] = min(5, max(1, int(rating)))
+
+        db["teacher_reviews"].update_one(
+            {"_id": ObjectId(review_id)},
+            {"$set": update_fields}
+        )
+
+        logger.info("[update-review] Review %s updated by teacher %s", review_id, teacher_id)
+        return jsonify({"status": "success", "message": "Review updated successfully"})
+
+    except Exception as e:
+        logger.error("[update-review] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/teacher/chat-history
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/chat-history', methods=['GET'])
+@teacher_required
+def get_teacher_chat_history():
+    """Get chat history for all students or specific student"""
+    try:
+        student_name = request.args.get('student_name', '')
+        student_id = request.args.get('student_id', '')
+        date_filter = request.args.get('date', '')
+        limit = int(request.args.get('limit', 50))
+        
+        # Build query
+        query = {}
+        if student_name:
+            query['student_name'] = {'$regex': f'^{student_name}$', '$options': 'i'}
+        if student_id:
+            try:
+                query['student_id'] = ObjectId(student_id)
+            except Exception:
+                pass
+        if date_filter:
+            query['date'] = date_filter
+            
+        # Get chat sessions
+        chat_sessions = list(db["mimi_chats"].find(query)
+                           .sort("updated_at", -1)
+                           .limit(limit))
+        
+        formatted_sessions = []
+        for session in chat_sessions:
+            messages = session.get('messages', [])
+            total_messages = len(messages)
+            
+            # Get session duration if available
+            started_at = session.get('started_at', '')
+            updated_at = session.get('updated_at', '')
+            
+            formatted_sessions.append({
+                'session_id': session.get('session_id', ''),
+                'student_name': session.get('student_name', ''),
+                'student_id': str(session.get('student_id', '')) if session.get('student_id') else '',
+                'date': session.get('date', ''),
+                'started_at': started_at,
+                'updated_at': updated_at,
+                'total_messages': total_messages,
+                'messages': messages[-10:] if len(messages) > 10 else messages,  # Last 10 messages
+                'has_more_messages': len(messages) > 10
+            })
+            
+        return jsonify({
+            'status': 'success',
+            'sessions': formatted_sessions,
+            'total_sessions': len(formatted_sessions)
+        })
+        
+    except Exception as e:
+        logger.error("[teacher-chat-history] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# GET /api/teacher/chat-session-details
+# ─────────────────────────────────────────────────────────────
+@teacher_bp.route('/api/teacher/chat-session-details', methods=['GET'])
+@teacher_required
+def get_chat_session_details():
+    """Get full details of a specific chat session"""
+    try:
+        session_id = request.args.get('session_id', '')
+        if not session_id:
+            return jsonify({"status": "error", "message": "session_id required"}), 400
+            
+        session = db["mimi_chats"].find_one({'session_id': session_id})
+        if not session:
+            return jsonify({"status": "error", "message": "Session not found"}), 404
+            
+        return jsonify({
+            'status': 'success',
+            'session': {
+                'session_id': session.get('session_id', ''),
+                'student_name': session.get('student_name', ''),
+                'student_id': str(session.get('student_id', '')) if session.get('student_id') else '',
+                'date': session.get('date', ''),
+                'started_at': session.get('started_at', ''),
+                'updated_at': session.get('updated_at', ''),
+                'total_messages': session.get('total_msgs', 0),
+                'messages': session.get('messages', [])
+            }
+        })
+        
+    except Exception as e:
+        logger.error("[chat-session-details] ERROR: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
  

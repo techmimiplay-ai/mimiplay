@@ -194,27 +194,7 @@ app = Flask(__name__)
 CORS(app, origins=["https://hilearn-test.com", "http://localhost:5173","https://www.hilearn-test.com"])
 
 
-@app.route("/api/health/llm", methods=["GET"])
-def health_llm():
-    """Last OpenAI/Anthropic check results. Use ?refresh=1 to re-verify keys (calls provider APIs)."""
-    global LLM_HEALTH
-    if request.args.get("refresh") == "1":
-        o_status, o_err = _healthcheck_openai_key(OPENAI_API_KEY)
-        a_status, a_err = _healthcheck_anthropic_key(ANTHROPIC_API_KEY)
-        LLM_HEALTH = {
-            "openai": o_status,
-            "openai_detail": o_err,
-            "anthropic": a_status,
-            "anthropic_detail": a_err,
-        }
-    body = {
-        "openai": LLM_HEALTH.get("openai"),
-        "anthropic": LLM_HEALTH.get("anthropic"),
-    }
-    if request.args.get("debug") == "1":
-        body["openai_detail"] = LLM_HEALTH.get("openai_detail")
-        body["anthropic_detail"] = LLM_HEALTH.get("anthropic_detail")
-    return jsonify(body)
+
 
 
 def _generate_tts_audio_base64(text: str) -> str:
@@ -257,12 +237,24 @@ def speak_text():
     return jsonify({'audio': audio_data, 'text': text})
 
 
-# System initialize karein
+# System initialize karein — face recognition only
 system = FaceRecognitionSystem()
-mimi_system = MimiLLMSession(
-    openai_api_key=OPENAI_API_KEY,
-    anthropic_api_key=ANTHROPIC_API_KEY,
-)
+
+# Session registry — keyed by session_id, one MimiLLMSession per active student
+# Prevents concurrent users from corrupting each other's state
+_mimi_sessions: dict = {}
+
+def _get_or_create_session(session_id: str, student_name: str = "", student_id=None, student_age: int = 10) -> MimiLLMSession:
+    if session_id not in _mimi_sessions:
+        _mimi_sessions[session_id] = MimiLLMSession(
+            openai_api_key=OPENAI_API_KEY,
+            anthropic_api_key=ANTHROPIC_API_KEY,
+            student_name=student_name,
+            session_id=session_id,
+            student_id=student_id,
+            student_age=student_age,
+        )
+    return _mimi_sessions[session_id]
 
 
 # =============================================================================
@@ -464,115 +456,8 @@ QUESTION_PROMPTS = {
     },
 }
 
-@app.route('/get-attendance-logs', methods=['GET'])
-@require_auth_token
-def get_attendance_logs():
-    try:
-        # MongoDB se saara data nikalna (latest records pehle)
-        logs = list(attendance_collection.find({}, {"_id": 0}).sort("date", -1))
-        return jsonify({
-            "status": "success",
-            "data": logs
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/start-classroom', methods=['GET'])
-@require_auth_token
-def start_classroom():
-    try:
-        system.fully_handled_this_session.clear()
-        system.running = False
-        def run_face():
-            try:
-                system.run()
-            except Exception as e:
-                logger.error("[FaceSystem] Error: %s", e, exc_info=True)
-
-        def run_mimi():
-            try:
-                mimi_system.start()
-            except Exception as e:
-                logger.error("[MimiSystem] Error: %s", e)
-
-        t1 = threading.Thread(target=run_face, daemon=True)
-        t2 = threading.Thread(target=run_mimi, daemon=True)
-        t1.start()
-        t2.start()
-
-        return jsonify({
-            "status": "success",
-            "message": "Mimi is now active and looking for faces!",
-            "character_state": "waving"
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/start-face-detect', methods=['GET'])
-@require_auth_token
-def start_face_detect():
-    try:
-        # AGAR PEHLE SE CHAL RAHA HAI TOH DUBARA START NA KAREIN
-        if getattr(system, '_activity_detecting', False):
-            return jsonify({"status": "already_running", "message": "Detection is already active"})
-
-        # Physical camera detection disabled per user request.
-        # Ensure we set flags but do not open cv2.VideoCapture
-        system._activity_detecting = True
-        system.current_action = 'detecting'
-        return jsonify({"status": "success", "message": "Face detection dummy started (backend camera disabled)"})
-
-    except Exception as e:
-        logger.error("[start-face-detect] Route Error: %s", e, exc_info=True)
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/stop-face-detect', methods=['GET'])
-@require_auth_token
-def stop_face_detect():
-    """Stop the activity face detection loop."""
-    try:
-        system._activity_detecting = False
-        return jsonify({"status": "success"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route('/get-status', methods=['GET'])
-@require_auth_token
-def get_status():
-    """
-    Real-time status from Python face recognition system.
-    Frontend polls this every 500ms for live updates.
-    """
-    try:
-        # Get current values from the system
-        person = getattr(system, 'current_person', None)
-        mood = getattr(system, 'current_mood', None)
-        action = getattr(system, 'current_action', 'idle')
-        
-        # Get warning flags (if any)
-        warning = getattr(system, 'current_warning', None)
-        message = getattr(system, 'current_message', None)
-        
-        response = {
-            "person": person,
-            "mood": mood if mood else None,
-            "action": action,
-            "warning": warning,
-            "message": message
-        }
-        
-        return jsonify(response)
-    
-    except Exception as e:
-        return jsonify({
-            "person": None,
-            "mood": None,
-            "action": "idle",
-            "warning": None,
-            "message": f"Error: {str(e)}"
-        })
 
 
 @app.route('/start-mimi-session', methods=['GET', 'POST'])
@@ -591,61 +476,63 @@ def start_mimi_session():
     except Exception:
         return jsonify({"status": "error", "message": "Invalid student_id"}), 400
 
-    mimi_system.student_name = student_name
-    mimi_system.session_id   = session_id
-    mimi_system.student_id   = student_oid
-    logger.info("Mimi session started for: %s | id: %s | session: %s", student_name, raw_id, session_id)
+    # Create a fresh session-scoped instance — no shared mutable state between users
+    # Age is kept for compatibility but all responses are standardized for ages 4-14
+    student_age = 10  # default (not used in prompts)
+    try:
+        from extensions import db as _db
+        student_doc = _db["students"].find_one({"_id": student_oid})
+        if student_doc and student_doc.get("age"):
+            student_age = int(student_doc["age"])  # Stored but not used in prompts
+    except Exception as e:
+        logger.warning("[start-mimi-session] Could not fetch student age: %s", e)
 
-    # Generate personalised greeting audio
-    greeting_text = f"Hi {student_name}! Great to see you. Go ahead and ask me anything."
+    session = _get_or_create_session(session_id, student_name, student_oid, student_age)
+    logger.info("Mimi session started for: %s | id: %s | session: %s (age stored but not used in prompts)",
+                student_name, raw_id, session_id)
+
+    greeting_text  = f"Hi {student_name}! Great to see you. Go ahead and ask me anything."
     greeting_audio = _generate_tts_audio_base64(greeting_text)
 
-    try:
-        thread = threading.Thread(target=mimi_system.start)
-        thread.daemon = True
-        thread.start()
-        return jsonify({
-            "status": "success",
-            "message": "Mimi LLM session started",
-            "greeting_text": greeting_text,
-            "greeting_audio": greeting_audio,   # base64 MP3 — play on frontend immediately
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({
+        "status":        "success",
+        "message":       "Mimi LLM session started",
+        "greeting_text": greeting_text,
+        "greeting_audio": greeting_audio,
+    })
 
 @app.route('/mimi-get', methods=['GET'])
 @require_auth_token
 def mimi_get():
     try:
-        text = getattr(mimi_system, 'current_text', None)
-        image = getattr(mimi_system, 'current_image', None)
-        video = getattr(mimi_system, 'current_video', None)
-        action = getattr(mimi_system, 'current_action', 'idle')
+        session_id = request.args.get('session_id', '')
+        session    = _mimi_sessions.get(session_id)
+        if not session:
+            return jsonify({'text': None, 'image_url': None, 'yt_video': None,
+                            'action': 'idle', 'has_response': False, 'session_ended': False})
+
+        text   = session.current_text
+        image  = session.current_image or None
+        video  = session.current_video or None
+        action = session.current_action
 
         if text == 'Thinking...':
             text = None
 
-        if not image:
-            image = None
-
-        if not video:
-            video = None
-
         resp = {
-            'text': text,
-            'image_url': image,
-            'yt_video': video,
-            'action': action,
+            'text':         text,
+            'image_url':    image,
+            'yt_video':     video,
+            'action':       action,
             'has_response': bool(text and action not in ('idle', 'listening', 'thinking')),
-            'session_ended': getattr(mimi_system, 'session_ended', False)
+            'session_ended': session.session_ended,
         }
 
-        # Audio Caching Logic
         if text:
-            if getattr(mimi_system, 'current_audio_text', None) != text:
-                mimi_system.current_audio = _generate_tts_audio_base64(text)
-                mimi_system.current_audio_text = text
-            resp["audio"] = getattr(mimi_system, 'current_audio', None)
+            if session.current_audio_text != text:
+                session.current_audio      = _generate_tts_audio_base64(text)
+                session.current_audio_text = text
+            resp['audio'] = session.current_audio
 
         return jsonify(resp)
 
@@ -687,6 +574,15 @@ def mimi_chat_audio():
     try:
         if 'audio' not in request.files:
             return jsonify({"status": "error", "message": "No audio"}), 400
+
+        session_id   = request.form.get('session_id', '')
+        student_name = request.form.get('student_name', '')
+
+        # Look up or create session (handles reconnects gracefully)
+        session = _mimi_sessions.get(session_id)
+        if not session:
+            session = _get_or_create_session(session_id, student_name)
+
         audio_file = request.files['audio']
         with io.BytesIO(audio_file.read()) as raw_buf:
             audio = AudioSegment.from_file(raw_buf)
@@ -699,16 +595,16 @@ def mimi_chat_audio():
                 text = recognizer.recognize_google(audio_data, language="en-IN")
 
         logger.info("Audio context transcribed: %s", text[:80])
-        result = mimi_system.process_text(text)
+        result = session.process_text(text)
         if result and result.get("text"):
-            mimi_system.current_audio = _generate_tts_audio_base64(result["text"])
-            mimi_system.current_audio_text = result["text"]
-            result["audio"] = mimi_system.current_audio
+            session.current_audio      = _generate_tts_audio_base64(result["text"])
+            session.current_audio_text = result["text"]
+            result["audio"]            = session.current_audio
         return jsonify({"status": "success", "text": text, "data": result})
     except sr.UnknownValueError:
         return jsonify({"status": "error", "message": "Could not understand audio"}), 400
     except Exception as e:
-        logger.error(f"Chat audio error: {e}")
+        logger.error("Chat audio error: %s", e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -743,22 +639,7 @@ def _evaluate_activity_answer(word, child_said, activity_name, student_name):
         }
     return result
 
-@app.route('/activity-check', methods=['POST'])
-@require_auth_token
-def activity_check():
-    """Check if child said a word correctly using LLM (Text-only version)."""
-    try:
-        data          = request.get_json() or {}
-        word          = data.get("word", "")
-        child_said    = data.get("child_said", "")
-        activity_name = data.get("activity_name", "Word Practice")
-        student_name  = data.get("student_name", "Student")
 
-        result = _evaluate_activity_answer(word, child_said, activity_name, student_name)
-        return jsonify({"result": result})
-    except Exception as e:
-        logger.error("[activity-check] ERROR: %s", e, exc_info=True)
-        return jsonify({"error": "An error occurred"}), 500
 
 @app.route('/activity-check-audio', methods=['POST'])
 @require_auth_token
@@ -909,6 +790,7 @@ def save_activity_result():
         stars         = min(5, max(0, int(data.get("stars", 0))))
         score         = int(data.get("score", 0))
         raw_id        = data.get("student_id", "")
+        qa            = data.get("qa", [])  # list of { question, childSaid, correct }
 
         # Resolve student_id to ObjectId — reject if missing or invalid
         try:
@@ -927,6 +809,7 @@ def save_activity_result():
             "activity_name": activity_name,
             "stars":         stars,
             "score":         score,
+            "qa":            qa,
             "timestamp":     now.isoformat(),
             "date":          now.strftime("%Y-%m-%d"),
             "time":          now.strftime("%H:%M:%S"),
@@ -939,7 +822,7 @@ def save_activity_result():
 
         try:
             from services.whatsapp_service import send_activity_result_to_parent
-            send_activity_result_to_parent(student_name, activity_name, stars, score)
+            send_activity_result_to_parent(student_name, activity_name, stars, score, qa)
         except Exception as wp_err:
             logger.warning("[WP] WhatsApp send failed: %s", wp_err)
 
@@ -948,63 +831,21 @@ def save_activity_result():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get-student-stars/<student_id>', methods=['GET'])
-@require_auth_token
-def get_student_stars(student_id):
-    try:
-        from extensions import db as mongo_db
-        try:
-            student_oid = ObjectId(student_id)
-        except Exception:
-            return jsonify({"error": "Invalid student_id"}), 400
-        today = datetime.now().strftime("%Y-%m-%d")
-        mine  = list(mongo_db["activity_results"].find(
-            {"student_id": student_oid}, {"_id": 0}
-        ).sort("timestamp", -1).limit(20))
-        return jsonify({
-            "student_id":  student_id,
-            "total_stars": sum(r.get("stars", 0) for r in mine),
-            "today_stars": sum(r.get("stars", 0) for r in mine if r.get("date") == today),
-            "results":     mine,
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
-@app.route('/stop-classroom', methods=['GET'])
+
+
+
+@app.route('/stop-face-detect', methods=['GET'])
 @require_auth_token
-def stop_classroom():
+def stop_face_detect():
+    """Stop the activity face detection loop."""
     try:
-        if hasattr(system, 'stop'):
-            system.stop()
-        elif hasattr(system, 'running'):
-            system.running = False
-        return jsonify({"status": "success", "message": "Classroom stopped"})
+        system._activity_detecting = False
+        return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-@app.route('/attendance', methods=['GET'])
-@require_auth_token
-def get_attendance():
-    try:
-        date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
-        records = list(attendance_collection.find({"date": date}, {"_id": 0}))
-        return jsonify({"status": "success", "records": records})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/check-attendance', methods=['POST'])
-@require_auth_token
-def check_attendance():
-
-    data = request.json
-    name = data.get("student_name")
-
-    if system.attendance.is_marked(name):
-        return jsonify({"message": "already_marked"})
-    else:
-        return jsonify({"message": "not_marked"})
 
 @app.route('/register-face', methods=['POST'])
 @require_auth_token
@@ -1094,43 +935,7 @@ def get_student_id_by_name():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/mark-attendance', methods=['POST'])
-@require_auth_token
-def mark_attendance():
-    try:
-        data = request.get_json() or {}
-        name = data.get("student_name", "").strip()
-        mood = data.get("mood", "Neutral")
 
-        if not name:
-            return jsonify({"message": "error", "reason": "name required"}), 400
-
-        today = datetime.now().strftime("%Y-%m-%d")
-        from extensions import db as _db
-        existing = _db["attendance"].find_one({"name": name, "date": today})
-        if existing:
-            return jsonify({"message": "already_marked"})
-
-        student = _db["students"].find_one(
-            {"name": {"$regex": f"^{name}$", "$options": "i"}}
-        )
-        student_id = student["_id"] if student else None
-
-        _db["attendance"].insert_one({
-            "student_id": student_id,
-            "name":       name,
-            "date":       today,
-            "time":       datetime.now().strftime("%H:%M:%S"),
-            "mood":       mood
-        })
-
-        logger.info("[mark-attendance] marked: %s | mood: %s", name, mood)
-        return jsonify({"message": "marked"})
-
-    except Exception as e:
-        logger.error("[mark-attendance] ERROR: %s", e, exc_info=True)
-        return jsonify({"message": "error", "reason": "An error occurred"}), 500  
-    
 @app.route('/process-frame', methods=['POST'])
 @require_auth_token
 def process_frame():
@@ -1295,46 +1100,232 @@ def mimi_save_chat():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/api/mimi/chat-history', methods=['GET'])
-def get_mimi_chat_history():
-    """Session ki saari chats return karo"""
+@app.route('/upload-session-video', methods=['POST'])
+@require_auth_token
+def upload_session_video():
+    """Upload and store session video recording"""
     try:
-        student_name = request.args.get('student_name', '')
-        session_id   = request.args.get('session_id', '')
-
-        query = {}
-        if student_name:
-            query['student_name'] = {'$regex': f'^{student_name}$', '$options': 'i'}
-        if session_id:
-            query['session_id'] = session_id
-
-        # Use dumps() from bson.json_util to handle ObjectId automatically
-        docs_raw = list(mimi_chats.find(query))
-        # Convert ObjectId fields to string manually for jsonify
-        docs = []
-        for d in docs_raw:
-            d['_id'] = str(d['_id'])
-            if 'student_id' in d and d['student_id'] is not None:
-                d['student_id'] = str(d['student_id'])
-            docs.append(d)
-
-        # Count total messages across all session docs
-        total_msgs = sum(len(d.get('messages', [])) for d in docs)
-
-        return jsonify({'chats': docs, 'count': len(docs), 'total_msgs': total_msgs})
+        if 'video' not in request.files:
+            return jsonify({"status": "error", "message": "No video file provided"}), 400
+            
+        video_file = request.files['video']
+        student_id = request.form.get('student_id', '')
+        student_name = request.form.get('student_name', '')
+        session_type = request.form.get('session_type', 'chat')
+        duration = int(request.form.get('duration', 0))
+        recorded_at = request.form.get('recorded_at', datetime.now(timezone.utc).isoformat())
+        
+        if not video_file or video_file.filename == '':
+            return jsonify({"status": "error", "message": "Invalid video file"}), 400
+            
+        # Generate unique filename
+        file_extension = video_file.filename.rsplit('.', 1)[1].lower() if '.' in video_file.filename else 'webm'
+        filename = f"session_{student_id}_{int(time.time())}.{file_extension}"
+        
+        # Save to GridFS (MongoDB file storage)
+        from extensions import db as mongo_db
+        import gridfs
+        
+        fs = gridfs.GridFS(mongo_db)
+        video_id = fs.put(
+            video_file.read(),
+            filename=filename,
+            content_type=video_file.content_type or 'video/webm',
+            student_id=student_id,
+            student_name=student_name,
+            session_type=session_type,
+            duration=duration,
+            recorded_at=recorded_at,
+            upload_date=datetime.now(timezone.utc)
+        )
+        
+        # Store metadata in session_videos collection
+        mongo_db["session_videos"].insert_one({
+            "video_id": video_id,
+            "student_id": ObjectId(student_id) if student_id else None,
+            "student_name": student_name,
+            "session_type": session_type,
+            "filename": filename,
+            "duration": duration,
+            "file_size": len(video_file.read()),
+            "recorded_at": recorded_at,
+            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "status": "uploaded"
+        })
+        
+        logger.info(f"[Video Upload] Saved session video for {student_name} ({session_type})")
+        
+        return jsonify({
+            "status": "success",
+            "video_id": str(video_id),
+            "filename": filename,
+            "message": "Video uploaded successfully"
+        })
+        
     except Exception as e:
-        logger.error(f"Chat history error: {e}")
-        return jsonify({'chats': [], 'count': 0}), 500
+        logger.error(f"[Video Upload] Error: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/send-video-to-parent', methods=['POST'])
+@require_auth_token
+def send_video_to_parent():
+    """Send session video to parent via WhatsApp"""
+    try:
+        data = request.get_json() or {}
+        video_id = data.get('video_id', '')
+        student_name = data.get('student_name', '')
+        
+        if not video_id or not student_name:
+            return jsonify({"status": "error", "message": "video_id and student_name required"}), 400
+            
+        # Get video metadata
+        from extensions import db as mongo_db
+        video_doc = mongo_db["session_videos"].find_one({"video_id": ObjectId(video_id)})
+        
+        if not video_doc:
+            return jsonify({"status": "error", "message": "Video not found"}), 404
+            
+        # Generate shareable link (valid for 7 days)
+        video_url = f"{request.host_url}api/video/{video_id}?token={generate_video_token(video_id)}"
+        
+        # Send via WhatsApp
+        try:
+            from services.whatsapp_service import send_session_video_to_parent
+            send_session_video_to_parent(
+                student_name=student_name,
+                video_url=video_url,
+                session_type=video_doc.get('session_type', 'session'),
+                duration=video_doc.get('duration', 0)
+            )
+            
+            # Update video status
+            mongo_db["session_videos"].update_one(
+                {"video_id": ObjectId(video_id)},
+                {"$set": {"sent_to_parent": True, "sent_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            
+            return jsonify({"status": "success", "message": "Video sent to parent successfully"})
+            
+        except Exception as wp_err:
+            logger.warning(f"[Video WhatsApp] Failed to send: {wp_err}")
+            return jsonify({"status": "error", "message": "Failed to send video via WhatsApp"}), 500
+            
+    except Exception as e:
+        logger.error(f"[Video Send] Error: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/video/<video_id>', methods=['GET'])
+def serve_video(video_id):
+    """Serve video file with token authentication"""
+    try:
+        token = request.args.get('token', '')
+        
+        # Verify token
+        if not verify_video_token(video_id, token):
+            return jsonify({"error": "Invalid or expired token"}), 403
+            
+        # Get video from GridFS
+        from extensions import db as mongo_db
+        import gridfs
+        
+        fs = gridfs.GridFS(mongo_db)
+        try:
+            video_file = fs.get(ObjectId(video_id))
+        except gridfs.NoFile:
+            return jsonify({"error": "Video not found"}), 404
+            
+        # Stream video file
+        def generate():
+            while True:
+                chunk = video_file.read(8192)  # 8KB chunks
+                if not chunk:
+                    break
+                yield chunk
+                
+        response = Response(
+            generate(),
+            mimetype=video_file.content_type or 'video/webm',
+            headers={
+                'Content-Disposition': f'inline; filename="{video_file.filename}"',
+                'Content-Length': str(video_file.length),
+                'Accept-Ranges': 'bytes'
+            }
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"[Video Serve] Error: {e}", exc_info=True)
+        return jsonify({"error": "Failed to serve video"}), 500
+
+
+def generate_video_token(video_id, expires_in=7*24*3600):  # 7 days
+    """Generate secure token for video access"""
+    import jwt
+    payload = {
+        'video_id': str(video_id),
+        'exp': datetime.now(timezone.utc).timestamp() + expires_in
+    }
+    return jwt.encode(payload, SECRET, algorithm='HS256')
+
+
+def verify_video_token(video_id, token):
+    """Verify video access token"""
+    try:
+        import jwt
+        payload = jwt.decode(token, SECRET, algorithms=['HS256'])
+        return payload.get('video_id') == str(video_id)
+    except Exception:
+        return False
 
 @app.route('/api/mimi/stop-session', methods=['POST'])
+@require_auth_token
 def stop_mimi_session():
-    """Session stop karo"""
+    """Mark session ended, remove it from registry, and optionally send chat history via WhatsApp."""
     try:
-        if mimi_system:
-            mimi_system.session_ended = True
+        data = request.get_json() or {}
+        session_id = data.get('session_id', '')
+        student_name = data.get('student_name', '')
+        send_whatsapp = data.get('send_whatsapp', False)
+        
+        session = _mimi_sessions.get(session_id)
+        if session:
+            session.session_ended = True
+            _mimi_sessions.pop(session_id, None)
+            logger.info("[stop-session] Removed session %s", session_id)
+        
+        # Send WhatsApp chat history if requested
+        if send_whatsapp and student_name:
+            try:
+                # Get chat history for this session
+                chat_docs = list(mimi_chats.find({
+                    "session_id": session_id,
+                    "student_name": student_name
+                }))
+                
+                # Extract all messages from all chat documents
+                all_messages = []
+                for doc in chat_docs:
+                    messages = doc.get('messages', [])
+                    all_messages.extend(messages)
+                
+                if all_messages:
+                    from services.whatsapp_service import send_chat_history_to_parent
+                    send_chat_history_to_parent(student_name, all_messages)
+                    logger.info("[stop-session] WhatsApp chat history sent for %s (%d messages)", 
+                               student_name, len(all_messages))
+                else:
+                    logger.info("[stop-session] No chat messages to send for %s", student_name)
+                    
+            except Exception as wp_err:
+                logger.warning("[stop-session] WhatsApp send failed: %s", wp_err)
+        
         return jsonify({'status': 'ok'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
