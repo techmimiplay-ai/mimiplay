@@ -191,7 +191,7 @@ def _run_llm_startup_checks():
 _run_llm_startup_checks()
 
 app = Flask(__name__)
-CORS(app, origins=["https://hilearn-test.com", "http://localhost:5173","https://www.hilearn-test.com"])
+CORS(app, origins=["https://mimiplay.in", "http://localhost:5173","https://www.mimiplay.in"])
 
 
 
